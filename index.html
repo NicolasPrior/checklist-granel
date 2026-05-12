@@ -208,18 +208,22 @@
     }
 
     .lacre-local{
-      margin-bottom:16px;
+      margin-bottom:18px;padding:16px;border-radius:20px;
+      border:1px solid rgba(0,129,63,.18);
+      background:linear-gradient(135deg,rgba(232,246,239,.92),rgba(255,255,255,.98));
+      box-shadow:0 12px 22px rgba(0,53,157,.05);
     }
 
     .lacre-local label{
-      display:block;margin-bottom:8px;color:var(--texto-suave);
-      font:700 12px/1 'Montserrat',sans-serif;letter-spacing:.08em;text-transform:uppercase;
+      display:block;margin-bottom:10px;color:var(--verde-700);
+      font:800 13px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
     }
 
     .lacre-local-select{
-      width:100%;height:54px;padding:0 16px;border-radius:16px;
-      border:1px solid var(--borda);background:#fff;color:var(--grafite);
-      font:700 16px/1 'Source Sans 3',sans-serif;outline:none;
+      width:100%;height:64px;padding:0 18px;border-radius:16px;
+      border:1px solid rgba(0,129,63,.22);background:#fff;color:var(--grafite);
+      font:800 20px/1.1 'Source Sans 3',sans-serif;outline:none;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.72);
     }
 
     .lacre-local-select.local-pendente{
@@ -548,6 +552,21 @@
       background:#F0F7F2;color:var(--verde-700);font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
     }
 
+    .pdf-lacre-location{
+      margin-bottom:5px;padding:7px 9px;border-radius:10px;
+      border:1px solid rgba(0,129,63,.18);
+      background:linear-gradient(135deg,#F0F7F2,#FFFFFF);
+    }
+
+    .pdf-lacre-location span{
+      display:block;margin-bottom:3px;color:var(--verde-700);
+      font:800 7px/1 'Montserrat',sans-serif;letter-spacing:.12em;text-transform:uppercase;
+    }
+
+    .pdf-lacre-location strong{
+      display:block;color:var(--grafite);font:800 14px/1.08 'Montserrat',sans-serif;
+    }
+
     .pdf-photo-card{
       padding:4px;border-radius:11px;border:1px solid #E5EEE8;background:#FFFFFF;
     }
@@ -558,7 +577,7 @@
     }
 
     .pdf-photo-frame{
-      overflow:hidden;display:flex;align-items:center;justify-content:center;height:376px;
+      overflow:hidden;display:flex;align-items:center;justify-content:center;height:342px;
       border-radius:10px;background:#F7FBF8;border:1px solid #E6EFE8;padding:3px;
     }
 
@@ -1154,9 +1173,14 @@
           <div class="pdf-lacre-top">
             <div>
               <h3>Lacre ${lacre.numero}</h3>
-              <p>${escaparHTML(lacre.local || 'Local não informado')}</p>
+              <p>Conferência visual registrada para o checklist.</p>
             </div>
             <div class="pdf-lacre-badge">Lacre ${lacre.numero}</div>
+          </div>
+
+          <div class="pdf-lacre-location">
+            <span>Local do lacre</span>
+            <strong>${escaparHTML(lacre.local || 'Local não informado')}</strong>
           </div>
 
           ${montarFotoPDF('Foto do lacre', lacre.foto || '')}
