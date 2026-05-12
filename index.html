@@ -38,7 +38,7 @@
 
     body{
       min-height:100vh;
-      padding:24px 14px 140px;
+      padding:24px 14px 34px;
       color:var(--grafite);
       font-family:'Source Sans 3',sans-serif;
       background:
@@ -317,8 +317,8 @@
     }
 
     .botoes-fixos{
-      position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:15;display:flex;gap:12px;
-      width:min(760px,calc(100% - 20px));padding:14px;border-radius:28px;
+      position:relative;z-index:15;display:flex;gap:12px;
+      width:min(760px,calc(100% - 20px));margin:24px auto 0;padding:14px;border-radius:28px;
       border:1px solid rgba(255,255,255,.70);background:rgba(255,255,255,.88);
       box-shadow:0 18px 40px rgba(0,53,157,.12);backdrop-filter:blur(14px);
     }
@@ -482,6 +482,10 @@
       display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
     }
 
+    .pdf-meta-grid .pdf-meta-card:last-child:nth-child(odd){
+      grid-column:1 / -1;
+    }
+
     .pdf-meta-card{
       min-height:54px;padding:8px 9px;border-radius:9px;border:1px solid #E5EEE8;background:#FFFFFF;
     }
@@ -581,7 +585,7 @@
     }
 
     @media (max-width: 680px){
-      body{padding:16px 10px 130px}
+      body{padding:16px 10px 24px}
       .hero-app,.content-shell,.panel{padding:20px}
       .hero-copy h1{font-size:28px}
       .botoes-fixos{width:calc(100% - 12px);padding:10px;gap:10px;border-radius:22px}
@@ -600,7 +604,7 @@
 
       <div class="hero-main">
         <div class="hero-copy">
-          <h1>Checklist de Carregamento - Granel.</h1>
+          <h1>Checklist de Carregamento - Granel</h1>
           <p>Preencha os dados da operação, informe a quantidade de lacres, registre uma foto para cada lacre e gere o PDF final com paginação fixa.</p>
         </div>
 
@@ -633,7 +637,7 @@
           </div>
 
           <div class="status-note">
-            A quantidade informada deve bater com o número de lacres cadastrados para o PDF ser liberado.
+            A quantidade informada deve corresponder ao número de lacres cadastrados para o PDF ser liberado.
           </div>
         </div>
 
@@ -659,7 +663,7 @@
           </div>
 
           <div class="campo">
-            <label for="colaborador">Colaborador que está realizando *</label>
+            <label for="colaborador">Colaborador responsável *</label>
             <div class="input-shell"><input type="text" id="colaborador" placeholder="Nome do colaborador" required></div>
           </div>
 
@@ -675,7 +679,7 @@
           <div>
             <div class="panel-kicker">Etapa 2</div>
             <h3>Lacres conferidos</h3>
-            <p>No PDF, os lacres saem em duplas por página, com a foto do lacre ampliada.</p>
+            <p>No PDF, os lacres são organizados em pares por página, com a foto do lacre ampliada.</p>
           </div>
         </div>
 
@@ -706,18 +710,18 @@
     const WATERMARK_LOGO_DATA_URL = 'data:image/jpeg;base64,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';
     const LOCAIS_LACRE = [
       'Amostrador',
-      'Boca visita 1º lacre',
-      'Boca visita 2º lacre',
-      'Cano mangueira',
+      'Boca de visita 1º lacre',
+      'Boca de visita 2º lacre',
+      'Cano da mangueira',
       'Filtro microbiológico',
       'Respiro',
-      'Válvula de alívio',
       'Válvula da bomba',
+      'Válvula de alívio',
+      'Válvula de retenção',
       'Válvula entrada principal 1',
       'Válvula entrada principal 2',
-      'Válvula Spray-Ball Superior',
-      'Válvula de retenção'
-    ];
+      'Válvula Spray-Ball superior'
+    ].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base', numeric: true }));
     const { jsPDF } = window.jspdf;
 
     function escaparHTML(valor) {
@@ -978,13 +982,13 @@
 
           <div class="foto-wrapper">
             <div class="foto-col">
-              <label>Foto lacre</label>
+              <label>Foto do lacre</label>
               <div class="box-imagem">
-                <span class="msg-camera"><strong>Registrar foto</strong><small>Toque para tirar uma foto ou escolher da galeria.</small></span>
+                <span class="msg-camera"><strong>Registrar foto</strong><small>Toque para abrir a câmera do celular.</small></span>
                 <input type="file" accept="image/*" capture="environment" onchange="preview(this)">
                 <img alt="Foto do lacre">
               </div>
-              <div class="foto-dica">Câmera ou galeria</div>
+              <div class="foto-dica">Câmera do celular</div>
             </div>
           </div>
         </div>
@@ -1155,7 +1159,7 @@
             <div class="pdf-lacre-badge">Lacre ${lacre.numero}</div>
           </div>
 
-          ${montarFotoPDF('Foto lacre', lacre.foto || '')}
+          ${montarFotoPDF('Foto do lacre', lacre.foto || '')}
         </article>
       `;
     }
@@ -1179,7 +1183,7 @@
               <div class="pdf-hero">
                 <div>
                   <div class="pdf-hero-kicker">Relatório operacional</div>
-                  <h1>Checklist de Carregamento - Granel.</h1>
+                  <h1>Checklist de Carregamento - Granel</h1>
                   <p>Documento gerado com os dados do carregamento e comprovação fotográfica dos lacres conferidos.</p>
                 </div>
 
@@ -1213,7 +1217,7 @@
                   ${montarMetaCard('Data do carregamento', campos.data)}
                   ${montarMetaCard('Motorista', campos.m)}
                   ${montarMetaCard('Placa do veículo', campos.p)}
-                  ${montarMetaCard('Colaborador que está realizando', campos.colaborador)}
+                  ${montarMetaCard('Colaborador responsável', campos.colaborador)}
                   ${montarMetaCard('Quantidade de lacres', campos.q)}
                   ${montarMetaCard('Tipo de carga', campos.tp)}
                 </div>
@@ -1245,7 +1249,7 @@
                 <div class="pdf-page-header">
                   <div>
                     <h2>Lacres conferidos</h2>
-                    <p>Lacres organizados em pares por página, com foto ampliada e mais nítida.</p>
+                    <p>Lacres organizados em pares por página, com foto ampliada e nítida.</p>
                   </div>
                   <div class="pdf-page-tags">
                     <div class="pdf-tag">${escaparHTML(campos.tp)}</div>
@@ -1343,7 +1347,7 @@
         }
 
         if (!validarQuantidadeLacres()) {
-          alert('A quantidade de lacres informada deve ser igual à quantidade de lacres cadastrados.');
+          alert('A quantidade de lacres informada deve corresponder à quantidade de lacres cadastrados.');
           return;
         }
 
@@ -1402,7 +1406,7 @@
         baixarBlob(blob, nomeArquivo);
 
         setTimeout(() => {
-          const desejaNovo = confirm('Deseja fazer um novo check list?');
+          const desejaNovo = confirm('Deseja iniciar um novo checklist?');
           if (desejaNovo) limparChecklist(true);
         }, 450);
 
