@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checklist de Carregamento - Granel | Dulcini S/A</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --azul-900:#00359D;
+      --azul-800:#004885;
+      --teal-700:#005B6E;
+      --verde-900:#004D31;
+      --verde-800:#006E57;
+      --verde-700:#00813F;
+      --verde-600:#13A35B;
+      --verde-500:#52C782;
+      --verde-100:#E8F6EF;
+      --verde-050:#F6FBF8;
+      --dourado-500:#63B46E;
+      --grafite:#183229;
+      --texto-suave:#65756E;
+      --borda:#D9E9E1;
+      --erro:#C53939;
+      --sombra-forte:0 30px 60px rgba(0,53,157,.10);
+      --sombra-media:0 18px 32px rgba(0,129,63,.08);
+    }
+
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+
+    body{
+      min-height:100vh;
+      padding:24px 14px 140px;
+      color:var(--grafite);
+      font-family:'Source Sans 3',sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(0,53,157,.06), transparent 36%),
+        radial-gradient(circle at top right, rgba(0,129,63,.08), transparent 34%),
+        linear-gradient(180deg,#F8FCF9 0%, #FCFEFD 50%, #F5FAF7 100%);
+    }
+
+    #render-area{
+      max-width:980px;margin:0 auto;border:1px solid rgba(255,255,255,.72);
+      border-radius:34px;overflow:hidden;background:rgba(255,255,255,.96);
+      box-shadow:var(--sombra-forte);backdrop-filter:blur(12px);
+    }
+
+    .hero-app{
+      padding:30px 30px 26px;color:#fff;
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,.20), transparent 28%),
+        linear-gradient(135deg,var(--azul-900),var(--teal-700) 52%,var(--verde-700) 100%);
+    }
+
+    .hero-brand{
+      display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;
+    }
+
+    .hero-pill{
+      display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;
+      background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);
+      font:700 11px/1 'Montserrat',sans-serif;letter-spacing:.18em;text-transform:uppercase;
+    }
+
+    .hero-pill::before{
+      content:'';width:10px;height:10px;border-radius:50%;
+      background:linear-gradient(135deg,var(--verde-500),#fff);box-shadow:0 0 14px rgba(82,199,130,.45);
+    }
+
+    .hero-logo{
+      width:42px;height:30px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.92);
+      padding:3px;margin-left:-4px;
+    }
+
+    .hero-caption{font-size:13px;color:rgba(255,255,255,.82)}
+
+    .hero-main{
+      display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.9fr);
+      gap:22px;align-items:stretch;
+    }
+
+    .hero-copy h1{
+      font:800 34px/1.05 'Montserrat',sans-serif;
+      max-width:540px;margin-bottom:14px;
+    }
+
+    .hero-copy p{
+      max-width:570px;font-size:16px;line-height:1.55;color:rgba(255,255,255,.90);
+    }
+
+    .hero-guide{
+      padding:20px;border-radius:24px;
+      background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.16);
+    }
+
+    .hero-guide strong{
+      display:block;margin-bottom:14px;font:700 13px/1 'Montserrat',sans-serif;
+      letter-spacing:.14em;text-transform:uppercase;
+    }
+
+    .hero-guide ul{list-style:none;display:grid;gap:10px}
+    .hero-guide li{
+      display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:16px;
+      background:rgba(255,255,255,.10);font-size:14px;color:rgba(255,255,255,.90);
+    }
+
+    .hero-guide li span{
+      display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;
+      border-radius:10px;background:rgba(255,255,255,.18);color:#EAFBF0;
+      font:700 12px/1 'Montserrat',sans-serif;
+    }
+
+    .content-shell{padding:26px}
+
+    .android-banner{
+      display:none;align-items:center;justify-content:space-between;gap:14px;margin-bottom:22px;
+      padding:18px 20px;border-radius:22px;border:1px solid rgba(0,129,63,.20);
+      background:linear-gradient(135deg,rgba(232,246,239,.72),rgba(255,255,255,.98));
+      box-shadow:0 14px 26px rgba(0,53,157,.06);
+    }
+
+    .android-banner strong{
+      display:block;margin-bottom:6px;color:var(--verde-900);
+      font:800 15px/1.1 'Montserrat',sans-serif;
+    }
+
+    .android-banner p{color:var(--texto-suave);font-size:14px;line-height:1.45}
+
+    .android-banner button{
+      min-width:160px;height:48px;padding:0 18px;border:none;border-radius:16px;color:#fff;
+      background:linear-gradient(135deg,var(--verde-700),var(--verde-600));
+      box-shadow:0 14px 24px rgba(0,53,157,.12);cursor:pointer;
+      font:700 12px/1 'Montserrat',sans-serif;letter-spacing:.06em;text-transform:uppercase;
+    }
+
+    .panel{
+      margin-bottom:22px;padding:24px;border-radius:28px;border:1px solid var(--borda);
+      background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(247,251,248,.99));
+      box-shadow:var(--sombra-media);
+    }
+
+    .panel:last-child{margin-bottom:0}
+
+    .panel-head{
+      display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;
+    }
+
+    .panel-kicker{
+      display:inline-flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--verde-700);
+      font:700 11px/1 'Montserrat',sans-serif;letter-spacing:.16em;text-transform:uppercase;
+    }
+
+    .panel-kicker::before{
+      content:'';width:26px;height:2px;border-radius:999px;
+      background:linear-gradient(90deg,var(--azul-900),rgba(0,129,63,0));
+    }
+
+    .panel h2,.panel h3,.header-lacre h4{font-family:'Montserrat',sans-serif}
+    .panel p{color:var(--texto-suave);font-size:15px;line-height:1.55}
+
+    .status-note{
+      min-width:220px;padding:14px 16px;border-radius:18px;background:var(--verde-050);
+      border:1px solid rgba(0,129,63,.10);color:var(--texto-suave);font-size:14px;line-height:1.35;
+    }
+
+    .dados-grid{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;
+    }
+
+    .campo{display:flex;flex-direction:column;gap:8px}
+
+    .campo label{
+      color:var(--texto-suave);font:700 12px/1 'Montserrat',sans-serif;
+      letter-spacing:.08em;text-transform:uppercase;
+    }
+
+    .input-shell{position:relative}
+    .input-shell::before{
+      content:'';position:absolute;inset:1px;border-radius:16px;
+      background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(244,249,246,.98));z-index:0;
+    }
+
+    .campo input:not([type="file"]){
+      position:relative;z-index:1;width:100%;height:54px;padding:0 16px;border-radius:16px;
+      border:1px solid transparent;background:transparent;color:var(--grafite);
+      font:600 17px/1 'Source Sans 3',sans-serif;outline:none;
+    }
+
+    .campo input[readonly]{
+      color:var(--verde-900);
+      background:rgba(234,245,238,.44);
+      cursor:not-allowed;
+    }
+
+    .campo-erro input{
+      border-color:rgba(197,57,57,.45)!important;
+      background:rgba(255,245,245,.95)!important;
+      box-shadow:0 0 0 4px rgba(197,57,57,.08)!important;
+    }
+
+    .lacre-local{
+      margin-bottom:16px;
+    }
+
+    .lacre-local label{
+      display:block;margin-bottom:8px;color:var(--texto-suave);
+      font:700 12px/1 'Montserrat',sans-serif;letter-spacing:.08em;text-transform:uppercase;
+    }
+
+    .lacre-local-select{
+      width:100%;height:54px;padding:0 16px;border-radius:16px;
+      border:1px solid var(--borda);background:#fff;color:var(--grafite);
+      font:700 16px/1 'Source Sans 3',sans-serif;outline:none;
+    }
+
+    .lacre-local-select.local-pendente{
+      border-color:rgba(197,57,57,.45);
+      background:rgba(255,245,245,.95);
+      box-shadow:0 0 0 4px rgba(197,57,57,.08);
+    }
+
+    .lacre-box{position:relative;overflow:hidden}
+    .lacre-box::before{
+      content:'';position:absolute;inset:0 0 auto;height:4px;
+      background:linear-gradient(90deg,var(--verde-700),var(--dourado-500));
+    }
+
+    #container-lacres .foto-wrapper{display:grid;grid-template-columns:1fr;gap:16px}
+
+    .foto-col label{
+      display:block;margin-bottom:10px;color:var(--texto-suave);
+      font:700 11px/1 'Montserrat',sans-serif;letter-spacing:.08em;text-transform:uppercase;text-align:center;
+    }
+
+    .foto-col .foto-dica{
+      margin-top:8px;text-align:center;color:var(--texto-suave);font-size:12px;line-height:1.25;
+    }
+
+    .box-imagem{
+      position:relative;overflow:hidden;min-height:260px;border-radius:22px;
+      border:1px dashed rgba(0,129,63,.26);
+      background:
+        radial-gradient(circle at top right, rgba(0,53,157,.08), transparent 25%),
+        linear-gradient(180deg,#FBFEFC 0%,#F1F8F3 100%);
+      cursor:pointer;
+    }
+
+    .box-imagem input{
+      position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:3;
+    }
+
+    .box-imagem img{
+      position:absolute;inset:0;margin:auto;
+      max-width:100%;max-height:100%;
+      width:auto;height:auto;
+      z-index:2;display:none;
+      object-fit:contain;object-position:center center;
+      background:linear-gradient(180deg,#FDFEFD 0%,#F1F7F3 100%);
+    }
+
+    .msg-camera{
+      position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:10px;padding:22px;text-align:center;color:var(--texto-suave);
+    }
+
+    .msg-camera strong{
+      font:700 15px/1 'Montserrat',sans-serif;color:var(--verde-700);
+    }
+
+    .msg-camera small{max-width:170px;font-size:13px;line-height:1.35}
+
+    .msg-camera::before{
+      content:'FOTO';display:inline-flex;align-items:center;justify-content:center;
+      min-width:70px;height:30px;padding:0 12px;border-radius:999px;
+      background:rgba(0,129,63,.08);color:var(--verde-700);
+      font:700 10px/1 'Montserrat',sans-serif;letter-spacing:.16em;text-transform:uppercase;
+    }
+
+    .box-imagem.com-imagem{
+      border-style:solid;border-color:rgba(0,129,63,.20);
+      background:linear-gradient(180deg,#fff 0%,#F7FBF8 100%);
+    }
+
+    .box-imagem.foto-pendente{
+      border-color:rgba(197,57,57,.45)!important;
+      background:linear-gradient(180deg,#FFF9F9 0%,#FFF0F0 100%)!important;
+      box-shadow:0 0 0 4px rgba(197,57,57,.08);
+    }
+
+    .header-lacre{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px;
+    }
+
+    .lacre-title-wrap span{
+      display:inline-flex;align-items:center;padding:8px 12px;margin-bottom:8px;border-radius:999px;
+      background:rgba(0,129,63,.08);color:var(--verde-700);
+      font:700 11px/1 'Montserrat',sans-serif;letter-spacing:.08em;text-transform:uppercase;
+    }
+
+    .header-lacre h4{font-size:20px;line-height:1.1}
+    .header-lacre p{color:var(--texto-suave);font-size:14px}
+
+    .btn-remover{
+      display:inline-flex;align-items:center;justify-content:center;
+      border:1px solid rgba(197,57,57,.18);background:rgba(197,57,57,.08);color:var(--erro);
+      height:42px;padding:0 14px;border-radius:14px;font:700 12px/1 'Montserrat',sans-serif;
+      letter-spacing:.06em;cursor:pointer;
+    }
+
+    .botoes-fixos{
+      position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:15;display:flex;gap:12px;
+      width:min(760px,calc(100% - 20px));padding:14px;border-radius:28px;
+      border:1px solid rgba(255,255,255,.70);background:rgba(255,255,255,.88);
+      box-shadow:0 18px 40px rgba(0,53,157,.12);backdrop-filter:blur(14px);
+    }
+
+    .btn{
+      flex:1;height:56px;border:none;border-radius:18px;cursor:pointer;
+      font:700 13px/1 'Montserrat',sans-serif;letter-spacing:.08em;text-transform:uppercase;
+    }
+
+    .btn-add{
+      color:var(--verde-700);background:linear-gradient(180deg,#fff 0%,#F5FAF7 100%);
+      border:1px solid rgba(0,129,63,.16);box-shadow:0 8px 18px rgba(0,129,63,.08);
+    }
+
+    .btn-pdf{
+      color:#fff;background:linear-gradient(135deg,var(--verde-700),var(--verde-600));
+      box-shadow:0 16px 28px rgba(0,53,157,.16);
+    }
+
+    #loading{
+      display:none;position:fixed;inset:0;z-index:30;background:rgba(9,17,12,.42);backdrop-filter:blur(8px);
+    }
+
+    .loading-card{
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      width:min(360px,calc(100% - 30px));padding:24px;border-radius:24px;
+      background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(246,250,247,.99));
+      box-shadow:0 26px 50px rgba(0,0,0,.18);text-align:center;
+    }
+
+    .loading-card strong{
+      display:block;margin-bottom:6px;color:var(--verde-900);font:800 20px/1.1 'Montserrat',sans-serif;
+    }
+
+    .loading-card p{color:var(--texto-suave);line-height:1.45}
+
+    .loading-bar{
+      height:10px;margin-top:18px;overflow:hidden;border-radius:999px;background:rgba(0,129,63,.10);
+    }
+
+    .loading-bar::after{
+      content:'';display:block;width:40%;height:100%;border-radius:inherit;
+      background:linear-gradient(90deg,var(--verde-700),var(--dourado-500));
+      animation:pulse-bar 1.1s linear infinite;
+    }
+
+    @keyframes pulse-bar{
+      from{transform:translateX(-110%)}
+      to{transform:translateX(280%)}
+    }
+
+    #pdf-render-root{
+      position:fixed;left:-100000px;top:0;width:794px;z-index:-1;
+      pointer-events:none;visibility:visible;opacity:1;
+    }
+
+    .pdf-document{width:794px;background:#FFFFFF}
+    .pdf-page{width:794px;height:1122px;padding:12px;overflow:hidden;background:#FFFFFF;margin:0}
+    .pdf-page.is-summary{height:560px}
+    .pdf-page + .pdf-page{margin-top:0}
+
+    .pdf-sheet{
+      position:relative;width:100%;height:100%;display:grid;grid-template-rows:auto 1fr auto;min-height:0;
+      border:1px solid #DDE8E0;border-radius:18px;background:#FFFFFF;padding:10px 10px 8px;overflow:hidden;
+    }
+
+    .pdf-watermark{
+      position:absolute;right:26px;bottom:22px;width:260px;opacity:.08;z-index:0;
+      mix-blend-mode:multiply;pointer-events:none;
+    }
+
+    .pdf-page.is-summary .pdf-watermark{
+      width:210px;right:28px;bottom:18px;opacity:.075;
+    }
+
+    .pdf-topline{
+      position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;min-height:0;
+    }
+
+    .pdf-brandline{
+      display:inline-flex;align-items:center;gap:8px;color:var(--verde-700);
+      font:700 9px/1 'Montserrat',sans-serif;letter-spacing:.15em;text-transform:uppercase;
+    }
+
+    .pdf-brandline::before{
+      content:'';width:24px;height:2px;border-radius:999px;
+      background:linear-gradient(90deg,var(--azul-900),var(--verde-700));
+    }
+
+    .pdf-pagecount{
+      display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;
+      background:#F0F7F2;color:var(--verde-700);
+      font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
+    }
+
+    .pdf-main{
+      position:relative;z-index:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:8px;
+    }
+
+    .pdf-hero{
+      display:grid;grid-template-columns:minmax(0,1.45fr) 180px;gap:9px;padding:12px;border-radius:13px;
+      color:#fff;background:linear-gradient(135deg,var(--azul-900),var(--teal-700) 54%,var(--verde-700));flex-shrink:0;
+    }
+
+    .pdf-hero-kicker{
+      display:inline-flex;align-items:center;gap:8px;margin-bottom:5px;padding:5px 8px;border-radius:999px;
+      background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.14);
+      font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.14em;text-transform:uppercase;
+    }
+
+    .pdf-hero h1{
+      max-width:410px;margin-bottom:5px;font:800 21px/1.02 'Montserrat',sans-serif;
+    }
+
+    .pdf-hero p{
+      max-width:420px;font-size:10px;line-height:1.26;color:rgba(255,255,255,.92);
+    }
+
+    .pdf-hero-side{display:grid;gap:5px;align-content:start}
+
+    .pdf-highlight{
+      padding:7px 8px;border-radius:10px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);
+    }
+
+    .pdf-highlight span{
+      display:block;margin-bottom:2px;color:rgba(255,255,255,.82);
+      font:700 7px/1 'Montserrat',sans-serif;letter-spacing:.12em;text-transform:uppercase;
+    }
+
+    .pdf-highlight strong{
+      display:block;font:700 12px/1.1 'Montserrat',sans-serif;
+    }
+
+    .pdf-section{
+      padding:9px;border-radius:12px;border:1px solid #E2ECE5;background:#FCFEFC;flex-shrink:0;
+    }
+
+    .pdf-section-head{
+      display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:8px;
+    }
+
+    .pdf-section-head span{
+      display:inline-flex;align-items:center;gap:6px;margin-bottom:2px;color:var(--verde-700);
+      font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.14em;text-transform:uppercase;
+    }
+
+    .pdf-section-head span::before{
+      content:'';width:18px;height:2px;border-radius:999px;
+      background:linear-gradient(90deg,var(--azul-900),var(--verde-700));
+    }
+
+    .pdf-section-head h2{
+      color:var(--verde-900);font:800 15px/1.04 'Montserrat',sans-serif;
+    }
+
+    .pdf-section-head p{
+      color:var(--texto-suave);font-size:9px;line-height:1.15;max-width:210px;text-align:right;
+    }
+
+    .pdf-meta-grid{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
+    }
+
+    .pdf-meta-card{
+      min-height:54px;padding:8px 9px;border-radius:9px;border:1px solid #E5EEE8;background:#FFFFFF;
+    }
+
+    .pdf-meta-card span{
+      display:block;margin-bottom:3px;color:var(--texto-suave);
+      font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.12em;text-transform:uppercase;
+    }
+
+    .pdf-meta-card strong{
+      display:block;color:var(--grafite);font:700 13px/1.08 'Montserrat',sans-serif;
+    }
+
+    .pdf-page-header{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+      margin-bottom:3px;padding:2px 2px 4px;border-bottom:1px solid #E0EAE3;flex-shrink:0;
+    }
+
+    .pdf-page-header h2{
+      margin-bottom:2px;color:var(--verde-900);font:800 16px/1.02 'Montserrat',sans-serif;
+    }
+
+    .pdf-page-header p{
+      color:var(--texto-suave);font-size:9px;line-height:1.1;max-width:270px;
+    }
+
+    .pdf-page-tags{
+      display:grid;gap:3px;min-width:118px;
+    }
+
+    .pdf-tag{
+      display:inline-flex;align-items:center;justify-content:center;min-height:18px;padding:0 7px;border-radius:999px;
+      background:#F0F7F2;color:var(--verde-700);
+      font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.08em;text-transform:uppercase;
+    }
+
+    .pdf-lacres-list{
+      display:grid;gap:5px;align-content:start;min-height:0;overflow:hidden;
+    }
+
+    .pdf-lacre-card{
+      padding:7px;border-radius:12px;border:1px solid #E2ECE5;background:#FCFEFC;
+      break-inside:avoid;page-break-inside:avoid;
+    }
+
+    .pdf-lacre-top{
+      display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;
+    }
+
+    .pdf-lacre-top h3{
+      color:var(--verde-900);font:800 15px/1.03 'Montserrat',sans-serif;
+    }
+
+    .pdf-lacre-top p{
+      margin-top:2px;color:var(--texto-suave);font-size:9px;
+    }
+
+    .pdf-lacre-badge{
+      display:inline-flex;align-items:center;justify-content:center;min-height:18px;padding:0 7px;border-radius:999px;
+      background:#F0F7F2;color:var(--verde-700);font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
+    }
+
+    .pdf-photo-card{
+      padding:4px;border-radius:11px;border:1px solid #E5EEE8;background:#FFFFFF;
+    }
+
+    .pdf-photo-card span{
+      display:block;margin-bottom:3px;text-align:center;color:var(--texto-suave);
+      font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
+    }
+
+    .pdf-photo-frame{
+      overflow:hidden;display:flex;align-items:center;justify-content:center;height:376px;
+      border-radius:10px;background:#F7FBF8;border:1px solid #E6EFE8;padding:3px;
+    }
+
+    .pdf-photo-frame img{
+      display:block;max-width:100% !important;max-height:100% !important;width:auto !important;height:auto !important;
+      object-fit:contain !important;object-position:center center !important;background:#FFFFFF;image-rendering:auto;
+    }
+
+    .pdf-footer{
+      position:relative;z-index:1;margin-top:3px;padding-top:5px;border-top:1px solid #E0EAE3;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--texto-suave);font-size:9px;min-height:0;
+    }
+
+    .pdf-footer strong{
+      color:var(--verde-700);font:700 9px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
+    }
+
+    @media (max-width: 860px){
+      .hero-main,.dados-grid{grid-template-columns:1fr}
+      .panel-head,.header-lacre{flex-direction:column;align-items:stretch}
+      .status-note{min-width:0}
+      .android-banner{align-items:stretch}
+      .android-banner button{width:100%}
+    }
+
+    @media (max-width: 680px){
+      body{padding:16px 10px 130px}
+      .hero-app,.content-shell,.panel{padding:20px}
+      .hero-copy h1{font-size:28px}
+      .botoes-fixos{width:calc(100% - 12px);padding:10px;gap:10px;border-radius:22px}
+      .btn{height:52px;font-size:11px}
+      .box-imagem{min-height:220px}
+    }
+  </style>
+</head>
+<body>
+  <main id="render-area">
+    <section class="hero-app">
+      <div class="hero-brand">
+        <div class="hero-pill"><img class="hero-logo" src="Logo_Beija-flor_Transp_.jpg" alt="">Dulcini S/A</div>
+        <div class="hero-caption">Checklist de carregamento a granel com evidência fotográfica dos lacres.</div>
+      </div>
+
+      <div class="hero-main">
+        <div class="hero-copy">
+          <h1>Checklist de Carregamento - Granel.</h1>
+          <p>Preencha os dados da operação, informe a quantidade de lacres, registre uma foto para cada lacre e gere o PDF final com paginação fixa.</p>
+        </div>
+
+        <div class="hero-guide">
+          <strong>Estrutura do PDF</strong>
+          <ul>
+            <li><span>01</span> Página 1 com informações do carregamento.</li>
+            <li><span>02</span> Páginas internas com 2 lacres por folha.</li>
+            <li><span>03</span> Tipo de carga fixo: GRANEL.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="content-shell">
+      <div class="android-banner" id="android-banner">
+        <div>
+          <strong>Abra no Chrome para salvar o PDF</strong>
+          <p>Se este link estiver aberto dentro do WhatsApp, toque no botão ao lado para abrir no Chrome do Android. Esse é o modo mais confiável para gerar o PDF no celular.</p>
+        </div>
+        <button type="button" onclick="abrirNoChromeAndroid()">Abrir no Chrome</button>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker">Dados da operação</div>
+            <h2>Informações do carregamento</h2>
+            <p>Esses dados aparecem na primeira página do PDF e identificam o checklist de carregamento a granel.</p>
+          </div>
+
+          <div class="status-note">
+            A quantidade informada deve bater com o número de lacres cadastrados para o PDF ser liberado.
+          </div>
+        </div>
+
+        <div class="dados-grid" id="container-campos">
+          <div class="campo">
+            <label for="c">Nome do cliente *</label>
+            <div class="input-shell"><input type="text" id="c" value="HEINZ BRASIL S/A" placeholder="HEINZ BRASIL S/A" readonly required></div>
+          </div>
+
+          <div class="campo">
+            <label for="data-carregamento">Data do carregamento *</label>
+            <div class="input-shell"><input type="text" id="data-carregamento" readonly required></div>
+          </div>
+
+          <div class="campo">
+            <label for="m">Motorista *</label>
+            <div class="input-shell"><input type="text" id="m" placeholder="Nome completo" required></div>
+          </div>
+
+          <div class="campo">
+            <label for="p">Placa do veículo *</label>
+            <div class="input-shell"><input type="text" id="p" placeholder="ABC-1234" required></div>
+          </div>
+
+          <div class="campo">
+            <label for="colaborador">Colaborador que está realizando *</label>
+            <div class="input-shell"><input type="text" id="colaborador" placeholder="Nome do colaborador" required></div>
+          </div>
+
+          <div class="campo">
+            <label for="qtd-lacres">Quantidade de lacres *</label>
+            <div class="input-shell"><input type="tel" inputmode="numeric" pattern="[0-9]*" id="qtd-lacres" placeholder="Ex: 10" required></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="painel-lacres" style="display:none;">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker">Etapa 2</div>
+            <h3>Lacres conferidos</h3>
+            <p>No PDF, os lacres saem em duplas por página, com a foto do lacre ampliada.</p>
+          </div>
+        </div>
+
+        <div id="container-lacres"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="botoes-fixos">
+    <button type="button" class="btn btn-add" id="btn-add-lacre" onclick="addLacre()">Adicionar lacre</button>
+    <button type="button" class="btn btn-pdf" onclick="gerarPDF()">Salvar PDF</button>
+  </div>
+
+  <div id="loading">
+    <div class="loading-card">
+      <strong>Gerando PDF</strong>
+      <p>Montando as páginas finais do checklist.</p>
+      <div class="loading-bar"></div>
+    </div>
+  </div>
+
+  <div id="pdf-render-root" aria-hidden="true"></div>
+
+  <script>
+    const TIPO_CARGA_FIXO = 'GRANEL';
+    const CLIENTE_PADRAO = 'HEINZ BRASIL S/A';
+    const LOGO_DATA_URL = 'data:image/jpeg;base64,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';
+    const WATERMARK_LOGO_DATA_URL = 'data:image/jpeg;base64,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';
+    const LOCAIS_LACRE = [
+      'Amostrador',
+      'Boca visita 1º lacre',
+      'Boca visita 2º lacre',
+      'Cano mangueira',
+      'Filtro microbiológico',
+      'Respiro',
+      'Válvula de alívio',
+      'Válvula da bomba',
+      'Válvula entrada principal 1',
+      'Válvula entrada principal 2',
+      'Válvula Spray-Ball Superior',
+      'Válvula de retenção'
+    ];
+    const { jsPDF } = window.jspdf;
+
+    function escaparHTML(valor) {
+      return String(valor || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function montarOpcoesLocais(valorSelecionado = '') {
+      const opcoes = ['<option value="">Selecione o local do lacre...</option>'];
+      LOCAIS_LACRE.forEach((local) => {
+        const selecionado = local === valorSelecionado ? ' selected' : '';
+        opcoes.push(`<option value="${escaparHTML(local)}"${selecionado}>${escaparHTML(local)}</option>`);
+      });
+      return opcoes.join('');
+    }
+
+    function formatarData(data = new Date()) {
+      return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).format(data);
+    }
+
+    function formatarDataHora(data = new Date()) {
+      const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+      const dia = String(data.getDate()).padStart(2,'0');
+      const mes = meses[data.getMonth()];
+      const ano = data.getFullYear();
+      const hora = String(data.getHours()).padStart(2,'0');
+      const minuto = String(data.getMinutes()).padStart(2,'0');
+      return `${dia} ${mes} ${ano} - ${hora}:${minuto}`;
+    }
+
+    function limparNomeArquivo(valor) {
+      return String(valor || 'sem_identificacao')
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\s+/g, '_');
+    }
+
+    function detectarAmbientePDF() {
+      const userAgent = navigator.userAgent || '';
+      return {
+        userAgent,
+        android: /Android/i.test(userAgent),
+        mobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
+        inApp: /WhatsApp|FBAN|FBAV|Instagram|Line|wv\)|WebView/i.test(userAgent)
+      };
+    }
+
+    function obterConfiguracaoFotos() {
+      const ambiente = detectarAmbientePDF();
+      return {
+        larguraMaximaFoto: ambiente.mobile ? 3600 : 4600,
+        alturaMaximaFoto: ambiente.mobile ? 3600 : 4600,
+        qualidadeFoto: ambiente.mobile ? 0.9 : 0.96
+      };
+    }
+
+    function obterConfiguracaoPDF() {
+      const ambiente = detectarAmbientePDF();
+      return {
+        escalaCanvas: ambiente.mobile ? 3.2 : 4.0
+      };
+    }
+
+    function atualizarStatusLoading(texto, titulo = 'Gerando PDF') {
+      const tituloEl = document.querySelector('#loading .loading-card strong');
+      const statusEl = document.querySelector('#loading .loading-card p');
+      if (tituloEl) tituloEl.innerText = titulo;
+      if (statusEl) statusEl.innerText = texto;
+    }
+
+    function esperar(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function aguardarImagensCarregadas(container) {
+      const imagens = Array.from(container.querySelectorAll('img')).filter(img => img.getAttribute('src'));
+
+      await Promise.all(imagens.map((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+          const finalizar = () => {
+            img.removeEventListener('load', finalizar);
+            img.removeEventListener('error', finalizar);
+            resolve();
+          };
+          img.addEventListener('load', finalizar, { once: true });
+          img.addEventListener('error', finalizar, { once: true });
+        });
+      }));
+    }
+
+    function abrirNoChromeAndroid() {
+      const ambiente = detectarAmbientePDF();
+      if (!ambiente.android) return;
+      if (!/^https?:/i.test(window.location.href)) return;
+
+      const urlAtual = new URL(window.location.href);
+      const caminho = `${urlAtual.host}${urlAtual.pathname}${urlAtual.search}${urlAtual.hash}`;
+      const intentUrl = `intent://${caminho}#Intent;scheme=${urlAtual.protocol.replace(':', '')};package=com.android.chrome;end`;
+      window.location.href = intentUrl;
+    }
+
+    function obterSrcBox(box) {
+      const img = box.querySelector('img');
+      return img ? (img.getAttribute('src') || '') : '';
+    }
+
+    function sincronizarCaixa(box) {
+      const msg = box.querySelector('.msg-camera');
+      const img = box.querySelector('img');
+      const src = obterSrcBox(box);
+
+      if (src) {
+        img.style.display = 'block';
+        if (msg) msg.style.display = 'none';
+        box.classList.add('com-imagem');
+        box.classList.remove('foto-pendente');
+      } else {
+        img.removeAttribute('src');
+        img.style.display = 'none';
+        if (msg) msg.style.display = 'flex';
+        box.classList.remove('com-imagem');
+        box.classList.remove('foto-pendente');
+      }
+    }
+
+    function sincronizarFotos(root = document) {
+      root.querySelectorAll('.box-imagem').forEach(sincronizarCaixa);
+    }
+
+    function preencherBoxImagem(box, src) {
+      const img = box.querySelector('img');
+      if (src) img.setAttribute('src', src);
+      else img.removeAttribute('src');
+      sincronizarCaixa(box);
+    }
+
+    async function comprimirImagem(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (evento) => {
+          const img = new Image();
+
+          img.onload = () => {
+            const config = obterConfiguracaoFotos();
+            const canvas = document.createElement('canvas');
+
+            const escala = Math.min(
+              1,
+              config.larguraMaximaFoto / img.width,
+              config.alturaMaximaFoto / img.height
+            );
+
+            canvas.width = Math.max(1, Math.round(img.width * escala));
+            canvas.height = Math.max(1, Math.round(img.height * escala));
+
+            const ctx = canvas.getContext('2d', { alpha: false });
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            resolve(canvas.toDataURL('image/jpeg', config.qualidadeFoto));
+          };
+
+          img.onerror = reject;
+          img.src = evento.target.result;
+        };
+
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function preview(input) {
+      if (!input.files || !input.files[0]) return;
+
+      const box = input.closest('.box-imagem');
+      const msg = box.querySelector('.msg-camera strong');
+      if (msg) msg.innerText = 'Processando...';
+
+      try {
+        const imagemCompacta = await comprimirImagem(input.files[0]);
+        preencherBoxImagem(box, imagemCompacta);
+      } catch {
+        preencherBoxImagem(box, '');
+        alert('Não foi possível processar essa foto.');
+      } finally {
+        const resetMsg = box.querySelector('.msg-camera strong');
+        if (resetMsg && !obterSrcBox(box)) resetMsg.innerText = 'Registrar foto';
+      }
+    }
+
+    function coletarCamposFormulario() {
+      return {
+        c: document.getElementById('c').value.trim(),
+        data: document.getElementById('data-carregamento').value.trim(),
+        m: document.getElementById('m').value.trim(),
+        p: document.getElementById('p').value.trim(),
+        colaborador: document.getElementById('colaborador').value.trim(),
+        q: document.getElementById('qtd-lacres').value.trim(),
+        tp: TIPO_CARGA_FIXO
+      };
+    }
+
+    function aplicarCamposFormulario(campos = {}) {
+      document.getElementById('c').value = campos.c || CLIENTE_PADRAO;
+      document.getElementById('data-carregamento').value = campos.data || formatarData(new Date());
+      document.getElementById('m').value = campos.m || '';
+      document.getElementById('p').value = campos.p || '';
+      document.getElementById('colaborador').value = campos.colaborador || '';
+      document.getElementById('qtd-lacres').value = campos.q || '';
+    }
+
+    function coletarLacres() {
+      return Array.from(document.querySelectorAll('#container-lacres .lacre-box')).map((lacreBox, index) => ({
+        numero: index + 1,
+        local: lacreBox.querySelector('.lacre-local-select')?.value || '',
+        foto: obterSrcBox(lacreBox.querySelector('.box-imagem'))
+      }));
+    }
+
+    function addLacre(lacreData = null) {
+      const container = document.getElementById('container-lacres');
+      const numero = container.querySelectorAll('.lacre-box').length + 1;
+      const opcoesLocais = montarOpcoesLocais(lacreData?.local || '');
+
+      const html = `
+        <div class="lacre-box panel">
+          <div class="header-lacre">
+            <div class="lacre-title-wrap">
+              <span class="lacre-seq">Lacre ${numero}</span>
+              <h4 class="lacre-nome">Conferência visual do lacre ${numero}</h4>
+              <p>Registre a foto do lacre para comprovação no PDF.</p>
+            </div>
+            <button type="button" class="btn-remover" onclick="removerLacre(this)">Remover</button>
+          </div>
+
+          <div class="lacre-local">
+            <label>Local do lacre *</label>
+            <select class="lacre-local-select" required>
+              ${opcoesLocais}
+            </select>
+          </div>
+
+          <div class="foto-wrapper">
+            <div class="foto-col">
+              <label>Foto lacre</label>
+              <div class="box-imagem">
+                <span class="msg-camera"><strong>Registrar foto</strong><small>Toque para tirar uma foto ou escolher da galeria.</small></span>
+                <input type="file" accept="image/*" onchange="preview(this)">
+                <img alt="Foto do lacre">
+              </div>
+              <div class="foto-dica">Câmera ou galeria</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.insertAdjacentHTML('beforeend', html);
+      const novoLacre = container.lastElementChild;
+
+      if (lacreData && lacreData.foto) {
+        preencherBoxImagem(novoLacre.querySelector('.box-imagem'), lacreData.foto);
+      }
+
+      document.getElementById('painel-lacres').style.display = 'block';
+      reordenarLacres();
+      sincronizarFotos(novoLacre);
+    }
+
+    function removerLacre(botao) {
+      const lacre = botao.closest('.lacre-box');
+      if (lacre) {
+        lacre.remove();
+        reordenarLacres();
+      }
+    }
+
+    function reordenarLacres() {
+      const lacres = Array.from(document.querySelectorAll('#container-lacres .lacre-box'));
+
+      lacres.forEach((lacreBox, index) => {
+        const span = lacreBox.querySelector('.lacre-seq');
+        const titulo = lacreBox.querySelector('.lacre-nome');
+        if (span) span.innerText = `Lacre ${index + 1}`;
+        if (titulo) titulo.innerText = `Conferência visual do lacre ${index + 1}`;
+      });
+
+      document.querySelectorAll('.btn-remover').forEach((botao) => {
+        botao.style.display = lacres.length > 1 ? 'inline-flex' : 'none';
+      });
+
+      document.getElementById('painel-lacres').style.display = lacres.length ? 'block' : 'none';
+    }
+
+    function sincronizarQuantidadeLacres() {
+      const qtd = parseInt(document.getElementById('qtd-lacres').value || '0', 10);
+      const container = document.getElementById('container-lacres');
+
+      if (!qtd || qtd < 1) {
+        container.innerHTML = '';
+        reordenarLacres();
+        return;
+      }
+
+      let atual = container.querySelectorAll('.lacre-box').length;
+
+      while (atual < qtd) {
+        addLacre();
+        atual++;
+      }
+
+      while (atual > qtd && atual > 1) {
+        container.lastElementChild?.remove();
+        atual--;
+      }
+
+      reordenarLacres();
+    }
+
+    function listarFotosFaltantes() {
+      const boxesVisiveis = Array.from(document.querySelectorAll('#render-area .box-imagem'))
+        .filter((box) => box.offsetParent !== null);
+
+      const faltantes = [];
+
+      boxesVisiveis.forEach((box) => {
+        if (obterSrcBox(box)) {
+          box.classList.remove('foto-pendente');
+          return;
+        }
+
+        box.classList.add('foto-pendente');
+
+        const secao = box.closest('.lacre-box');
+        const titulo = secao ? (secao.querySelector('.lacre-seq')?.innerText || 'Lacre') : 'Foto';
+        const legenda = box.closest('.foto-col').querySelector('label').innerText.trim();
+        faltantes.push(`${titulo} - ${legenda}`);
+      });
+
+      return faltantes;
+    }
+
+    function validarCamposObrigatorios() {
+      const camposObrigatorios = Array.from(
+        document.querySelectorAll('#container-campos input[required]')
+      );
+
+      let valido = true;
+
+      camposObrigatorios.forEach((campo) => {
+        const wrapper = campo.closest('.campo');
+        const preenchido = String(campo.value || '').trim() !== '';
+        if (wrapper) wrapper.classList.toggle('campo-erro', !preenchido);
+        if (!preenchido) valido = false;
+      });
+
+      return valido;
+    }
+
+    function listarLocaisLacresFaltantes() {
+      const faltantes = [];
+
+      document.querySelectorAll('#container-lacres .lacre-box').forEach((lacreBox, index) => {
+        const select = lacreBox.querySelector('.lacre-local-select');
+        const preenchido = String(select?.value || '').trim() !== '';
+        if (select) select.classList.toggle('local-pendente', !preenchido);
+        if (!preenchido) faltantes.push(`Lacre ${index + 1}`);
+      });
+
+      return faltantes;
+    }
+
+    function validarQuantidadeLacres() {
+      const qtdInformada = parseInt(document.getElementById('qtd-lacres').value || '0', 10);
+      const qtdAtual = document.querySelectorAll('#container-lacres .lacre-box').length;
+
+      if (!qtdInformada || qtdInformada < 1) return false;
+      return qtdInformada === qtdAtual;
+    }
+
+    function obterDadosPDF() {
+      const campos = coletarCamposFormulario();
+      const lacres = coletarLacres();
+
+      return {
+        campos,
+        lacres,
+        geradoEm: formatarDataHora(new Date())
+      };
+    }
+
+    function montarMetaCard(titulo, valor) {
+      return `
+        <div class="pdf-meta-card">
+          <span>${escaparHTML(titulo)}</span>
+          <strong>${escaparHTML(valor || '-')}</strong>
+        </div>
+      `;
+    }
+
+    function montarFotoPDF(label, src = '') {
+      return `
+        <div class="pdf-photo-card">
+          <span>${escaparHTML(label)}</span>
+          <div class="pdf-photo-frame">
+            ${src ? `<img src="${src}" alt="${escaparHTML(label)}">` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function montarLacrePDF(lacre) {
+      return `
+        <article class="pdf-lacre-card">
+          <div class="pdf-lacre-top">
+            <div>
+              <h3>Lacre ${lacre.numero}</h3>
+              <p>${escaparHTML(lacre.local || 'Local não informado')}</p>
+            </div>
+            <div class="pdf-lacre-badge">Lacre ${lacre.numero}</div>
+          </div>
+
+          ${montarFotoPDF('Foto lacre', lacre.foto || '')}
+        </article>
+      `;
+    }
+
+    function construirPaginasPDF() {
+      const { campos, lacres, geradoEm } = obterDadosPDF();
+      const root = document.getElementById('pdf-render-root');
+      const paginas = [];
+      const totalPaginas = 1 + Math.ceil(lacres.length / 2);
+
+      paginas.push(`
+        <section class="pdf-page is-summary">
+          <div class="pdf-sheet">
+            <img class="pdf-watermark" src="${WATERMARK_LOGO_DATA_URL}" alt="">
+            <div class="pdf-topline">
+              <div class="pdf-brandline">Dulcini S/A • Checklist de Carregamento - Granel</div>
+              <div class="pdf-pagecount">Página 1 / ${totalPaginas}</div>
+            </div>
+
+            <div class="pdf-main">
+              <div class="pdf-hero">
+                <div>
+                  <div class="pdf-hero-kicker">Relatório operacional</div>
+                  <h1>Checklist de Carregamento - Granel.</h1>
+                  <p>Documento gerado com os dados do carregamento e comprovação fotográfica dos lacres conferidos.</p>
+                </div>
+
+                <div class="pdf-hero-side">
+                  <div class="pdf-highlight">
+                    <span>Tipo de carga</span>
+                    <strong>${escaparHTML(campos.tp)}</strong>
+                  </div>
+                  <div class="pdf-highlight">
+                    <span>Quantidade de lacres</span>
+                    <strong>${escaparHTML(campos.q || '0')}</strong>
+                  </div>
+                  <div class="pdf-highlight">
+                    <span>Emitido em</span>
+                    <strong>${escaparHTML(geradoEm)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <section class="pdf-section">
+                <div class="pdf-section-head">
+                  <div>
+                    <span>Dados principais</span>
+                    <h2>Informações do carregamento</h2>
+                  </div>
+                  <p>Os dados abaixo compõem a identificação principal deste carregamento a granel.</p>
+                </div>
+
+                <div class="pdf-meta-grid">
+                  ${montarMetaCard('Nome do cliente', campos.c)}
+                  ${montarMetaCard('Data do carregamento', campos.data)}
+                  ${montarMetaCard('Motorista', campos.m)}
+                  ${montarMetaCard('Placa do veículo', campos.p)}
+                  ${montarMetaCard('Colaborador que está realizando', campos.colaborador)}
+                  ${montarMetaCard('Quantidade de lacres', campos.q)}
+                  ${montarMetaCard('Tipo de carga', campos.tp)}
+                </div>
+              </section>
+            </div>
+
+            <div class="pdf-footer">
+              <span>Relatório de carregamento a granel</span>
+              <strong>Dulcini S/A</strong>
+            </div>
+          </div>
+        </section>
+      `);
+
+      for (let i = 0; i < lacres.length; i += 2) {
+        const dupla = lacres.slice(i, i + 2);
+        const paginaAtual = paginas.length + 1;
+
+        paginas.push(`
+          <section class="pdf-page">
+            <div class="pdf-sheet">
+              <img class="pdf-watermark" src="${WATERMARK_LOGO_DATA_URL}" alt="">
+              <div class="pdf-topline">
+                <div class="pdf-brandline">Dulcini S/A • Lacres conferidos</div>
+                <div class="pdf-pagecount">Página ${paginaAtual} / ${totalPaginas}</div>
+              </div>
+
+              <div class="pdf-main">
+                <div class="pdf-page-header">
+                  <div>
+                    <h2>Lacres conferidos</h2>
+                    <p>Lacres organizados em pares por página, com foto ampliada e mais nítida.</p>
+                  </div>
+                  <div class="pdf-page-tags">
+                    <div class="pdf-tag">${escaparHTML(campos.tp)}</div>
+                    <div class="pdf-tag">Placa ${escaparHTML(campos.p || '-')}</div>
+                    <div class="pdf-tag">${escaparHTML(campos.data || '-')}</div>
+                  </div>
+                </div>
+
+                <div class="pdf-lacres-list">
+                  ${dupla.map(montarLacrePDF).join('')}
+                </div>
+              </div>
+
+              <div class="pdf-footer">
+                <span>Lacres ${i + 1}${dupla.length === 2 ? ` e ${i + 2}` : ''}</span>
+                <strong>Dulcini S/A</strong>
+              </div>
+            </div>
+          </section>
+        `);
+      }
+
+      root.innerHTML = `<div class="pdf-document">${paginas.join('')}</div>`;
+      return root;
+    }
+
+    function limparChecklist(confirmarMensagem = true) {
+      aplicarCamposFormulario({ c:'', data: formatarData(new Date()), m:'', p:'', colaborador:'', q:'' });
+
+      document.getElementById('container-lacres').innerHTML = '';
+      document.getElementById('painel-lacres').style.display = 'none';
+      document.getElementById('pdf-render-root').innerHTML = '';
+
+      reordenarLacres();
+      sincronizarFotos();
+
+      if (confirmarMensagem) {
+        setTimeout(() => {
+          document.getElementById('c').focus();
+        }, 100);
+      }
+    }
+
+    async function renderizarPaginaParaImagem(pagina, escalaCanvas) {
+      const canvas = await html2canvas(pagina, {
+        scale: escalaCanvas,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#FFFFFF',
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        width: pagina.offsetWidth,
+        height: pagina.offsetHeight,
+        windowWidth: pagina.scrollWidth,
+        windowHeight: pagina.scrollHeight
+      });
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+      }
+
+      return canvas.toDataURL('image/png');
+    }
+
+    function baixarBlob(blob, nomeArquivo) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nomeArquivo;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function obterAlturaPaginaPDF(pagina) {
+      return Number(((pagina.offsetHeight / 1122) * 297).toFixed(2));
+    }
+
+    function obterOrientacaoPaginaPDF(alturaPagina) {
+      return alturaPagina < 210 ? 'landscape' : 'portrait';
+    }
+
+    async function gerarPDF() {
+      const loading = document.getElementById('loading');
+      loading.style.display = 'block';
+
+      try {
+        if (!validarCamposObrigatorios()) {
+          alert('Preencha todos os campos obrigatórios.');
+          return;
+        }
+
+        if (!validarQuantidadeLacres()) {
+          alert('A quantidade de lacres informada deve ser igual à quantidade de lacres cadastrados.');
+          return;
+        }
+
+        const locaisFaltantes = listarLocaisLacresFaltantes();
+        if (locaisFaltantes.length) {
+          alert('Informe o local dos lacres:\n\n' + locaisFaltantes.join('\n'));
+          return;
+        }
+
+        const faltantes = listarFotosFaltantes();
+        if (faltantes.length) {
+          alert('Ainda faltam fotos obrigatórias:\n\n' + faltantes.join('\n'));
+          return;
+        }
+
+        atualizarStatusLoading('Montando as páginas do checklist...');
+        const root = construirPaginasPDF();
+
+        await esperar(300);
+        await aguardarImagensCarregadas(root);
+
+        const paginas = Array.from(root.querySelectorAll('.pdf-page'));
+        if (!paginas.length) {
+          throw new Error('Nenhuma página foi montada.');
+        }
+
+        const configPDF = obterConfiguracaoPDF();
+        const campos = coletarCamposFormulario();
+        const nomeBase = campos.p || campos.data || 'checklist_granel';
+        const nomeArquivo = `Checklist_Granel_${limparNomeArquivo(nomeBase)}.pdf`;
+
+        atualizarStatusLoading('Convertendo páginas em PDF...');
+        const alturaPrimeiraPagina = obterAlturaPaginaPDF(paginas[0]);
+        const doc = new jsPDF({
+          orientation: obterOrientacaoPaginaPDF(alturaPrimeiraPagina),
+          unit: 'mm',
+          format: [210, alturaPrimeiraPagina],
+          compress: false
+        });
+
+        for (let i = 0; i < paginas.length; i++) {
+          atualizarStatusLoading(`Gerando página ${i + 1} de ${paginas.length}...`);
+          const alturaPagina = obterAlturaPaginaPDF(paginas[i]);
+
+          const imagem = await renderizarPaginaParaImagem(
+            paginas[i],
+            configPDF.escalaCanvas
+          );
+
+          if (i > 0) doc.addPage([210, alturaPagina], obterOrientacaoPaginaPDF(alturaPagina));
+          doc.addImage(imagem, 'PNG', 0, 0, 210, alturaPagina);
+        }
+
+        atualizarStatusLoading('Salvando arquivo PDF...');
+        const blob = doc.output('blob');
+        baixarBlob(blob, nomeArquivo);
+
+        setTimeout(() => {
+          const desejaNovo = confirm('Deseja fazer um novo check list?');
+          if (desejaNovo) limparChecklist(true);
+        }, 450);
+
+      } catch (erro) {
+        console.error('Erro ao gerar PDF:', erro);
+        alert('Não foi possível gerar o PDF neste aparelho.');
+      } finally {
+        setTimeout(() => {
+          loading.style.display = 'none';
+        }, 650);
+      }
+    }
+
+    document.getElementById('qtd-lacres').addEventListener('change', sincronizarQuantidadeLacres);
+    document.getElementById('qtd-lacres').addEventListener('input', () => {
+      const campo = document.getElementById('qtd-lacres');
+      campo.value = campo.value.replace(/\D+/g, '');
+      if (!campo.value) {
+        document.getElementById('container-lacres').innerHTML = '';
+        reordenarLacres();
+      } else {
+        sincronizarQuantidadeLacres();
+      }
+    });
+
+    document.addEventListener('change', (event) => {
+      if (event.target.classList?.contains('lacre-local-select') && event.target.value) {
+        event.target.classList.remove('local-pendente');
+      }
+    });
+
+    window.addEventListener('load', () => {
+      aplicarCamposFormulario({ data: formatarData(new Date()) });
+      sincronizarFotos();
+
+      const ambiente = detectarAmbientePDF();
+      if (ambiente.android && ambiente.inApp) {
+        document.getElementById('android-banner').style.display = 'flex';
+      }
+    });
+  </script>
+</body>
+</html>
