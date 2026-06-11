@@ -38,13 +38,29 @@
 
     body{
       min-height:100vh;
-      padding:24px 14px 34px;
+      padding:24px 14px 140px;
       color:var(--grafite);
       font-family:'Source Sans 3',sans-serif;
       background:
         radial-gradient(circle at top left, rgba(0,53,157,.06), transparent 36%),
         radial-gradient(circle at top right, rgba(0,129,63,.08), transparent 34%),
         linear-gradient(180deg,#F8FCF9 0%, #FCFEFD 50%, #F5FAF7 100%);
+    }
+
+    #btn-abrir-pendentes{
+      position:fixed;top:20px;right:20px;z-index:20;
+      border:1px solid rgba(255,255,255,.24);
+      background:linear-gradient(135deg,var(--verde-700),var(--verde-600));
+      color:#fff;padding:12px 18px;border-radius:999px;
+      font:700 13px/1 'Montserrat',sans-serif;letter-spacing:.04em;
+      box-shadow:0 16px 30px rgba(0,53,157,.16);cursor:pointer;
+    }
+
+    #count-pendentes{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-width:22px;height:22px;margin-left:8px;padding:0 7px;
+      border-radius:999px;background:linear-gradient(135deg,var(--azul-900),var(--teal-700));
+      color:#fff;font-size:11px;
     }
 
     #render-area{
@@ -177,6 +193,7 @@
     }
 
     .campo{display:flex;flex-direction:column;gap:8px}
+    .campo.full{grid-column:1 / -1}
 
     .campo label{
       color:var(--texto-suave);font:700 12px/1 'Montserrat',sans-serif;
@@ -321,8 +338,8 @@
     }
 
     .botoes-fixos{
-      position:relative;z-index:15;display:flex;gap:12px;
-      width:min(760px,calc(100% - 20px));margin:24px auto 0;padding:14px;border-radius:28px;
+      position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:15;display:flex;gap:12px;
+      width:min(760px,calc(100% - 20px));margin:0;padding:14px;border-radius:28px;
       border:1px solid rgba(255,255,255,.70);background:rgba(255,255,255,.88);
       box-shadow:0 18px 40px rgba(0,53,157,.12);backdrop-filter:blur(14px);
     }
@@ -337,9 +354,60 @@
       border:1px solid rgba(0,129,63,.16);box-shadow:0 8px 18px rgba(0,129,63,.08);
     }
 
+    .btn-standby{
+      color:#fff;background:linear-gradient(135deg,var(--azul-900),var(--teal-700));
+      box-shadow:0 12px 24px rgba(0,53,157,.13);
+    }
+
     .btn-pdf{
       color:#fff;background:linear-gradient(135deg,var(--verde-700),var(--verde-600));
       box-shadow:0 16px 28px rgba(0,53,157,.16);
+    }
+
+    #modal-pendentes{
+      display:none;position:fixed;inset:0;z-index:25;padding:20px;
+      background:rgba(9,17,12,.56);backdrop-filter:blur(10px);
+    }
+
+    .modal-conteudo{
+      width:min(560px,100%);margin:42px auto 0;padding:28px;border-radius:30px;
+      border:1px solid rgba(255,255,255,.60);
+      background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(246,250,247,.99));
+      box-shadow:0 30px 60px rgba(0,0,0,.18);
+    }
+
+    .modal-conteudo h3{
+      margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--borda);
+      color:var(--verde-900);font:800 22px/1.1 'Montserrat',sans-serif;
+    }
+
+    #lista-pendentes-corpo{
+      max-height:420px;overflow-y:auto;padding-right:4px;
+    }
+
+    .pendente-card{
+      margin-bottom:12px;padding:16px;border-radius:20px;border:1px solid var(--borda);
+      background:linear-gradient(180deg,#fff 0%,#F4FAF6 100%);
+    }
+
+    .pendente-card strong{
+      display:block;color:var(--verde-900);font:700 16px/1.1 'Montserrat',sans-serif;margin-bottom:4px;
+    }
+
+    .pendente-card small{
+      display:block;color:var(--texto-suave);font-size:13px;line-height:1.4;
+    }
+
+    .pendente-acoes{display:flex;gap:8px;margin-top:14px}
+    .pendente-acoes button{
+      height:42px;border:none;border-radius:14px;cursor:pointer;
+      font:700 12px/1 'Montserrat',sans-serif;letter-spacing:.05em;
+    }
+
+    .pendente-retomar{flex:1;color:#fff;background:linear-gradient(135deg,var(--verde-700),var(--verde-600))}
+    .pendente-excluir{
+      width:48px;color:var(--erro);background:rgba(197,57,57,.10);
+      border:1px solid rgba(197,57,57,.18);
     }
 
     #loading{
@@ -576,6 +644,16 @@
       font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
     }
 
+    .pdf-lacre-ocr{
+      margin:0 0 4px;padding:6px 8px;border-radius:8px;text-align:center;
+      background:#F0F7F2;color:var(--verde-900);border:1px solid #DCEBE2;
+      font:800 10px/1.1 'Montserrat',sans-serif;
+    }
+
+    .pdf-lacre-ocr.is-missing{
+      background:#FFF8E0;color:#7A5A00;border-color:#F1DA85;
+    }
+
     .pdf-photo-frame{
       overflow:hidden;display:flex;align-items:center;justify-content:center;height:342px;
       border-radius:10px;background:#F7FBF8;border:1px solid #E6EFE8;padding:3px;
@@ -596,6 +674,7 @@
     }
 
     @media (max-width: 860px){
+      #btn-abrir-pendentes{top:12px;right:10px}
       .hero-main,.dados-grid{grid-template-columns:1fr}
       .panel-head,.header-lacre{flex-direction:column;align-items:stretch}
       .status-note{min-width:0}
@@ -614,6 +693,10 @@
   </style>
 </head>
 <body>
+  <button type="button" id="btn-abrir-pendentes" onclick="abrirPendentes()">
+    Pendentes <span id="count-pendentes">0</span>
+  </button>
+
   <main id="render-area">
     <section class="hero-app">
       <div class="hero-brand">
@@ -690,6 +773,11 @@
             <label for="qtd-lacres">Quantidade de lacres *</label>
             <div class="input-shell"><input type="tel" inputmode="numeric" pattern="[0-9]*" id="qtd-lacres" placeholder="Ex: 10" required></div>
           </div>
+
+          <div class="campo full">
+            <label for="nota-fiscal">Número da nota fiscal *</label>
+            <div class="input-shell"><input type="text" id="nota-fiscal" placeholder="Informe quando disponível" required></div>
+          </div>
         </div>
       </section>
 
@@ -709,7 +797,16 @@
 
   <div class="botoes-fixos">
     <button type="button" class="btn btn-add" id="btn-add-lacre" onclick="addLacre()">Adicionar lacre</button>
+    <button type="button" class="btn btn-standby" onclick="salvarParaDepois()">Salvar pendente</button>
     <button type="button" class="btn btn-pdf" onclick="gerarPDF()">Salvar PDF</button>
+  </div>
+
+  <div id="modal-pendentes">
+    <div class="modal-conteudo">
+      <h3>Checklists pendentes</h3>
+      <div id="lista-pendentes-corpo"></div>
+      <button type="button" class="btn btn-add" style="width:100%; margin-top:14px;" onclick="fecharPendentes()">Fechar</button>
+    </div>
   </div>
 
   <div id="loading">
@@ -725,6 +822,12 @@
   <script>
     const TIPO_CARGA_FIXO = 'GRANEL';
     const CLIENTE_PADRAO = 'HEINZ BRASIL S/A';
+    const STORAGE_KEY = 'dulcini_checklists_granel_pendentes';
+    const LEGACY_STORAGE_KEYS = [STORAGE_KEY, 'checklists_granel_pendentes'];
+    const DB_NAME = 'dulcini_checklists_granel_db';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'pendentes';
+
     const LOGO_DATA_URL = 'data:image/jpeg;base64,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';
     const WATERMARK_LOGO_DATA_URL = 'data:image/jpeg;base64,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';
     const LOCAIS_LACRE = [
@@ -742,6 +845,109 @@
       'Válvula Spray-Ball superior'
     ].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base', numeric: true }));
     const { jsPDF } = window.jspdf;
+    let dbInstance = null;
+    let pendentes = [];
+    const OCR_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    const OCR_LACRE_NAO_IDENTIFICADO = 'Número do lacre não identificado';
+    const OCR_CONFIDENCE_MIN = 65;
+    let ocrScriptPromise = null;
+    let ocrWorkerPromise = null;
+
+    function abrirBanco() {
+      if (dbInstance) return Promise.resolve(dbInstance);
+
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+
+        request.onsuccess = () => {
+          dbInstance = request.result;
+          resolve(dbInstance);
+        };
+
+        request.onerror = () => reject(request.error || new Error('Não foi possível abrir o banco IndexedDB.'));
+      });
+    }
+
+    async function obterStore(modo = 'readonly') {
+      const db = await abrirBanco();
+      return db.transaction(STORE_NAME, modo).objectStore(STORE_NAME);
+    }
+
+    async function listarPendentesDB() {
+      const store = await obterStore('readonly');
+
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => {
+          const dados = Array.isArray(request.result) ? request.result : [];
+          dados.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+          resolve(dados);
+        };
+        request.onerror = () => reject(request.error || new Error('Erro ao listar pendentes.'));
+      });
+    }
+
+    async function salvarPendenteDB(item) {
+      const store = await obterStore('readwrite');
+
+      return new Promise((resolve, reject) => {
+        const request = store.put(item);
+        request.onsuccess = () => resolve(item);
+        request.onerror = () => reject(request.error || new Error('Erro ao salvar pendente.'));
+      });
+    }
+
+    async function excluirPendenteDB(id) {
+      const store = await obterStore('readwrite');
+
+      return new Promise((resolve, reject) => {
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error || new Error('Erro ao excluir pendente.'));
+      });
+    }
+
+    function normalizarRegistroPendente(item = {}) {
+      return {
+        id: item?.id || (Date.now() + Math.floor(Math.random() * 10000)),
+        dt: item?.dt || formatarDataHora(new Date()),
+        snapshot: normalizarPendente(item)
+      };
+    }
+
+    async function migrarLocalStorageParaIndexedDB() {
+      try {
+        for (const chave of LEGACY_STORAGE_KEYS) {
+          const legado = JSON.parse(localStorage.getItem(chave) || '[]');
+          if (!Array.isArray(legado) || !legado.length) continue;
+
+          for (const item of legado) {
+            await salvarPendenteDB(normalizarRegistroPendente(item));
+          }
+
+          localStorage.removeItem(chave);
+        }
+      } catch (erro) {
+        console.error('Falha na migração do localStorage para IndexedDB:', erro);
+      }
+    }
+
+    async function recarregarPendentes() {
+      pendentes = await listarPendentesDB();
+      atualizarContador();
+    }
+
+    function atualizarContador() {
+      const span = document.getElementById('count-pendentes');
+      if (span) span.innerText = String(pendentes.length);
+    }
 
     function escaparHTML(valor) {
       return String(valor || '')
@@ -750,6 +956,26 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function normalizarTextoMaiusculo(valor = '') {
+      return String(valor || '').trim().toLocaleUpperCase('pt-BR');
+    }
+
+    function aplicarMaiusculoNoCampo(campo) {
+      const inicio = campo.selectionStart;
+      const fim = campo.selectionEnd;
+      campo.value = normalizarTextoMaiusculo(campo.value);
+      if (document.activeElement === campo && inicio !== null && fim !== null) {
+        campo.setSelectionRange(inicio, fim);
+      }
+    }
+
+    function configurarCamposMaiusculos() {
+      document.querySelectorAll('#container-campos input[type="text"]:not([readonly])').forEach((input) => {
+        aplicarMaiusculoNoCampo(input);
+        input.addEventListener('input', () => aplicarMaiusculoNoCampo(input));
+      });
     }
 
     function montarOpcoesLocais(valorSelecionado = '') {
@@ -821,6 +1047,162 @@
 
     function esperar(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function registrarFalhaOCR(contexto, motivo, detalhes = {}) {
+      console.warn('OCR do lacre não identificado:', { contexto, motivo, ...detalhes });
+    }
+
+    function carregarBibliotecaOCR() {
+      if (window.Tesseract) return Promise.resolve(window.Tesseract);
+      if (ocrScriptPromise) return ocrScriptPromise;
+
+      ocrScriptPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        const timeout = setTimeout(() => {
+          reject(new Error('Tempo limite excedido ao carregar a biblioteca de OCR.'));
+        }, 20000);
+
+        script.src = OCR_SCRIPT_URL;
+        script.async = true;
+        script.onload = () => {
+          clearTimeout(timeout);
+          if (window.Tesseract) resolve(window.Tesseract);
+          else reject(new Error('Biblioteca de OCR carregada sem objeto Tesseract.'));
+        };
+        script.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('Falha ao carregar a biblioteca de OCR.'));
+        };
+
+        document.head.appendChild(script);
+      });
+
+      return ocrScriptPromise;
+    }
+
+    async function obterWorkerOCR() {
+      if (ocrWorkerPromise) return ocrWorkerPromise;
+
+      ocrWorkerPromise = (async () => {
+        const tesseract = await carregarBibliotecaOCR();
+        if (!tesseract?.createWorker) {
+          throw new Error('A biblioteca de OCR não disponibilizou o worker.');
+        }
+
+        const worker = await tesseract.createWorker('eng');
+        if (worker.setParameters) {
+          await worker.setParameters({
+            tessedit_char_whitelist: '0123456789',
+            preserve_interword_spaces: '1'
+          });
+        }
+        return worker;
+      })();
+
+      return ocrWorkerPromise;
+    }
+
+    async function encerrarWorkerOCR() {
+      if (!ocrWorkerPromise) return;
+
+      try {
+        const worker = await ocrWorkerPromise;
+        if (worker?.terminate) await worker.terminate();
+      } catch (erro) {
+        console.warn('Falha ao encerrar o worker de OCR:', erro);
+      } finally {
+        ocrWorkerPromise = null;
+      }
+    }
+
+    function limparNumeroLacreOCR(valor = '') {
+      return String(valor || '').replace(/\D+/g, '');
+    }
+
+    function calcularConfiancaOCR(dados = {}, numero = '') {
+      const base = Number(dados.confidence || 0);
+      const palavras = Array.isArray(dados.words) ? dados.words : [];
+      const confiancas = palavras
+        .filter((palavra) => {
+          const digitos = limparNumeroLacreOCR(palavra?.text || '');
+          return digitos && (digitos === numero || numero.includes(digitos) || digitos.includes(numero));
+        })
+        .map((palavra) => Number(palavra.confidence || 0))
+        .filter((valor) => Number.isFinite(valor) && valor > 0);
+
+      return confiancas.length ? Math.max(base, ...confiancas) : base;
+    }
+
+    function extrairCandidatosNumeroLacre(dados = {}) {
+      const texto = String(dados.text || '');
+      const encontrados = texto.match(/\d[\d\s.\-_/]{2,}\d/g) || [];
+      const mapa = new Map();
+
+      encontrados.forEach((trecho) => {
+        const numero = limparNumeroLacreOCR(trecho);
+        if (numero.length < 4 || numero.length > 20) return;
+
+        const confianca = calcularConfiancaOCR(dados, numero);
+        const atual = mapa.get(numero);
+        if (!atual || confianca > atual.confianca) {
+          mapa.set(numero, { numero, confianca });
+        }
+      });
+
+      return Array.from(mapa.values()).sort((a, b) => b.confianca - a.confianca || b.numero.length - a.numero.length);
+    }
+
+    async function identificarNumeroLacreNaFoto(src, contexto) {
+      if (!src) {
+        registrarFalhaOCR(contexto, 'foto ausente');
+        return { identificado: false, numero: '', confianca: 0 };
+      }
+
+      try {
+        const worker = await obterWorkerOCR();
+        const resultado = await worker.recognize(src);
+        const dados = resultado?.data || {};
+        const candidatos = extrairCandidatosNumeroLacre(dados);
+        const principal = candidatos[0];
+
+        if (!principal) {
+          registrarFalhaOCR(contexto, 'nenhum candidato numérico encontrado', { texto: dados.text || '' });
+          return { identificado: false, numero: '', confianca: Number(dados.confidence || 0) };
+        }
+
+        if (principal.confianca < OCR_CONFIDENCE_MIN) {
+          registrarFalhaOCR(contexto, 'confiança abaixo do limite', principal);
+          return { identificado: false, numero: '', confianca: principal.confianca };
+        }
+
+        const segundo = candidatos.find((candidato) => candidato.numero !== principal.numero);
+        if (segundo && principal.confianca - segundo.confianca < 12) {
+          registrarFalhaOCR(contexto, 'resultado ambíguo', { principal, segundo });
+          return { identificado: false, numero: '', confianca: principal.confianca };
+        }
+
+        return {
+          identificado: true,
+          numero: principal.numero,
+          confianca: principal.confianca
+        };
+      } catch (erro) {
+        registrarFalhaOCR(contexto, 'falha técnica no OCR', { erro });
+        return { identificado: false, numero: '', confianca: 0 };
+      }
+    }
+
+    function formatarResultadoOCR(ocr) {
+      if (ocr?.identificado && ocr.numero) {
+        return 'Lacre: ' + ocr.numero;
+      }
+
+      return OCR_LACRE_NAO_IDENTIFICADO;
+    }
+
+    function classeResultadoOCR(ocr) {
+      return ocr?.identificado ? '' : ' is-missing';
     }
 
     async function aguardarImagensCarregadas(container) {
@@ -949,23 +1331,26 @@
 
     function coletarCamposFormulario() {
       return {
-        c: document.getElementById('c').value.trim(),
+        c: normalizarTextoMaiusculo(document.getElementById('c').value.trim()),
         data: document.getElementById('data-carregamento').value.trim(),
-        m: document.getElementById('m').value.trim(),
-        p: document.getElementById('p').value.trim(),
-        colaborador: document.getElementById('colaborador').value.trim(),
+        m: normalizarTextoMaiusculo(document.getElementById('m').value.trim()),
+        p: normalizarTextoMaiusculo(document.getElementById('p').value.trim()),
+        colaborador: normalizarTextoMaiusculo(document.getElementById('colaborador').value.trim()),
         q: document.getElementById('qtd-lacres').value.trim(),
+        nf: normalizarTextoMaiusculo(document.getElementById('nota-fiscal').value.trim()),
         tp: TIPO_CARGA_FIXO
       };
     }
 
     function aplicarCamposFormulario(campos = {}) {
-      document.getElementById('c').value = campos.c || CLIENTE_PADRAO;
+      document.getElementById('c').value = normalizarTextoMaiusculo(campos.c || CLIENTE_PADRAO);
       document.getElementById('data-carregamento').value = campos.data || formatarData(new Date());
-      document.getElementById('m').value = campos.m || '';
-      document.getElementById('p').value = campos.p || '';
-      document.getElementById('colaborador').value = campos.colaborador || '';
+      document.getElementById('m').value = normalizarTextoMaiusculo(campos.m || '');
+      document.getElementById('p').value = normalizarTextoMaiusculo(campos.p || '');
+      document.getElementById('colaborador').value = normalizarTextoMaiusculo(campos.colaborador || '');
       document.getElementById('qtd-lacres').value = campos.q || '';
+      document.getElementById('nota-fiscal').value = normalizarTextoMaiusculo(campos.nf || '');
+      configurarCamposMaiusculos();
     }
 
     function coletarLacres() {
@@ -1147,6 +1532,22 @@
       };
     }
 
+    async function obterDadosPDFComOCR() {
+      const dados = obterDadosPDF();
+      const lacres = [];
+
+      for (let i = 0; i < dados.lacres.length; i++) {
+        const lacre = dados.lacres[i];
+        atualizarStatusLoading('Lendo número do lacre ' + (i + 1) + ' de ' + dados.lacres.length + '...');
+        lacres.push({
+          ...lacre,
+          ocr: await identificarNumeroLacreNaFoto(lacre.foto, 'Granel - lacre ' + lacre.numero)
+        });
+      }
+
+      return { ...dados, lacres };
+    }
+
     function montarMetaCard(titulo, valor) {
       return `
         <div class="pdf-meta-card">
@@ -1156,10 +1557,11 @@
       `;
     }
 
-    function montarFotoPDF(label, src = '') {
+    function montarFotoPDF(label, src = '', ocr = null) {
       return `
         <div class="pdf-photo-card">
           <span>${escaparHTML(label)}</span>
+          <div class="pdf-lacre-ocr${classeResultadoOCR(ocr)}">${escaparHTML(formatarResultadoOCR(ocr))}</div>
           <div class="pdf-photo-frame">
             ${src ? `<img src="${src}" alt="${escaparHTML(label)}">` : ''}
           </div>
@@ -1183,13 +1585,13 @@
             <strong>${escaparHTML(lacre.local || 'Local não informado')}</strong>
           </div>
 
-          ${montarFotoPDF('Foto do lacre', lacre.foto || '')}
+          ${montarFotoPDF('Foto do lacre', lacre.foto || '', lacre.ocr)}
         </article>
       `;
     }
 
-    function construirPaginasPDF() {
-      const { campos, lacres, geradoEm } = obterDadosPDF();
+    function construirPaginasPDF(dadosPDF = null) {
+      const { campos, lacres, geradoEm } = dadosPDF || obterDadosPDF();
       const root = document.getElementById('pdf-render-root');
       const paginas = [];
       const totalPaginas = 1 + Math.ceil(lacres.length / 2);
@@ -1244,6 +1646,7 @@
                   ${montarMetaCard('Colaborador responsável', campos.colaborador)}
                   ${montarMetaCard('Quantidade de lacres', campos.q)}
                   ${montarMetaCard('Tipo de carga', campos.tp)}
+                  ${montarMetaCard('Número da nota fiscal', campos.nf)}
                 </div>
               </section>
             </div>
@@ -1279,6 +1682,7 @@
                     <div class="pdf-tag">${escaparHTML(campos.tp)}</div>
                     <div class="pdf-tag">Placa ${escaparHTML(campos.p || '-')}</div>
                     <div class="pdf-tag">${escaparHTML(campos.data || '-')}</div>
+                    <div class="pdf-tag">NF ${escaparHTML(campos.nf || '-')}</div>
                   </div>
                 </div>
 
@@ -1301,7 +1705,7 @@
     }
 
     function limparChecklist(confirmarMensagem = true) {
-      aplicarCamposFormulario({ c:'', data: formatarData(new Date()), m:'', p:'', colaborador:'', q:'' });
+      aplicarCamposFormulario({ c:'', data: formatarData(new Date()), m:'', p:'', colaborador:'', q:'', nf:'' });
 
       document.getElementById('container-lacres').innerHTML = '';
       document.getElementById('painel-lacres').style.display = 'none';
@@ -1309,11 +1713,140 @@
 
       reordenarLacres();
       sincronizarFotos();
+      fecharPendentes();
 
       if (confirmarMensagem) {
         setTimeout(() => {
           document.getElementById('c').focus();
         }, 100);
+      }
+    }
+
+    function coletarEstadoAtual() {
+      return {
+        campos: coletarCamposFormulario(),
+        lacres: coletarLacres()
+      };
+    }
+
+    function normalizarPendente(item = {}) {
+      if (item?.snapshot) {
+        return {
+          campos: item.snapshot.campos || {},
+          lacres: Array.isArray(item.snapshot.lacres) ? item.snapshot.lacres : []
+        };
+      }
+
+      return {
+        campos: item.campos || {},
+        lacres: Array.isArray(item.lacres) ? item.lacres : []
+      };
+    }
+
+    async function salvarParaDepois() {
+      const snapshot = coletarEstadoAtual();
+
+      if (!snapshot.campos.p || !snapshot.campos.colaborador) {
+        alert('Preencha a placa e o colaborador responsável antes de salvar como pendente.');
+        return;
+      }
+
+      try {
+        const registro = {
+          id: Date.now(),
+          dt: formatarDataHora(new Date()),
+          snapshot
+        };
+
+        await salvarPendenteDB(registro);
+        await recarregarPendentes();
+        alert('Checklist pendente salvo com sucesso.');
+        limparChecklist(false);
+      } catch (erro) {
+        console.error('Erro ao salvar no IndexedDB:', erro);
+        alert('Não foi possível salvar o checklist pendente neste dispositivo.');
+      }
+    }
+
+    async function abrirPendentes() {
+      try {
+        await recarregarPendentes();
+      } catch (erro) {
+        console.error(erro);
+      }
+
+      const corpo = document.getElementById('lista-pendentes-corpo');
+      if (!pendentes.length) {
+        corpo.innerHTML = '<p style="text-align:center; color:#65756E; padding:24px 10px;">Nenhum checklist pendente.</p>';
+      } else {
+        corpo.innerHTML = pendentes.map((item) => {
+          const snapshot = normalizarPendente(item);
+          const campos = snapshot.campos || {};
+          const placa = escaparHTML(campos.p || '-');
+          const nf = escaparHTML(campos.nf || 'Sem nota fiscal');
+          const totalLacres = Array.isArray(snapshot.lacres) ? snapshot.lacres.length : 0;
+
+          return `
+            <div class="pendente-card">
+              <strong>Placa ${placa}</strong>
+              <small>NF: ${nf}</small>
+              <small>${escaparHTML(item.dt || '')} - Lacres: ${totalLacres}</small>
+              <div class="pendente-acoes">
+                <button type="button" class="pendente-retomar" onclick="recuperar(${item.id})">Retomar</button>
+                <button type="button" class="pendente-excluir" aria-label="Excluir pendente" title="Excluir pendente" onclick="excluirItem(${item.id})">X</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('modal-pendentes').style.display = 'block';
+    }
+
+    function fecharPendentes() {
+      const modal = document.getElementById('modal-pendentes');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function excluirItem(id) {
+      if (!confirm('Deseja excluir este checklist pendente?')) return;
+
+      try {
+        await excluirPendenteDB(id);
+        await recarregarPendentes();
+        await abrirPendentes();
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível excluir este pendente.');
+      }
+    }
+
+    function aplicarEstadoAtual(snapshot) {
+      aplicarCamposFormulario(snapshot.campos || {});
+      const container = document.getElementById('container-lacres');
+      container.innerHTML = '';
+      (Array.isArray(snapshot.lacres) ? snapshot.lacres : []).forEach((lacre) => addLacre(lacre));
+
+      if (!container.children.length && snapshot.campos?.q) {
+        sincronizarQuantidadeLacres();
+      }
+
+      reordenarLacres();
+      sincronizarFotos();
+    }
+
+    async function recuperar(id) {
+      const item = pendentes.find(p => p.id === id);
+      if (!item) return;
+
+      try {
+        aplicarEstadoAtual(normalizarPendente(item));
+        await excluirPendenteDB(id);
+        await recarregarPendentes();
+        fecharPendentes();
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível recuperar este pendente.');
       }
     }
 
@@ -1387,8 +1920,11 @@
           return;
         }
 
+        atualizarStatusLoading('Lendo números dos lacres nas fotos...');
+        const dadosPDF = await obterDadosPDFComOCR();
+
         atualizarStatusLoading('Montando as páginas do checklist...');
-        const root = construirPaginasPDF();
+        const root = construirPaginasPDF(dadosPDF);
 
         await esperar(300);
         await aguardarImagensCarregadas(root);
@@ -1400,7 +1936,7 @@
 
         const configPDF = obterConfiguracaoPDF();
         const campos = coletarCamposFormulario();
-        const nomeBase = campos.p || campos.data || 'checklist_granel';
+        const nomeBase = campos.nf || campos.p || campos.data || 'checklist_granel';
         const nomeArquivo = `Checklist_Granel_${limparNomeArquivo(nomeBase)}.pdf`;
 
         atualizarStatusLoading('Convertendo páginas em PDF...');
@@ -1438,6 +1974,7 @@
         console.error('Erro ao gerar PDF:', erro);
         alert('Não foi possível gerar o PDF neste aparelho.');
       } finally {
+        await encerrarWorkerOCR();
         setTimeout(() => {
           loading.style.display = 'none';
         }, 650);
@@ -1462,8 +1999,19 @@
       }
     });
 
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
       aplicarCamposFormulario({ data: formatarData(new Date()) });
+      configurarCamposMaiusculos();
+
+      try {
+        await abrirBanco();
+        await migrarLocalStorageParaIndexedDB();
+        await recarregarPendentes();
+      } catch (erro) {
+        console.error('Erro ao iniciar IndexedDB:', erro);
+        alert('Não foi possível iniciar o armazenamento local neste dispositivo.');
+      }
+
       sincronizarFotos();
 
       const ambiente = detectarAmbientePDF();
