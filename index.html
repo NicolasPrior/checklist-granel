@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Checklist de Carregamento - Granel | Dulcini S/A</title>
+  <title>Checklist de carregamento a granel | Dulcini S/A</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -694,7 +694,7 @@
 </head>
 <body>
   <button type="button" id="btn-abrir-pendentes" onclick="abrirPendentes()">
-    Pendentes <span id="count-pendentes">0</span>
+    Pendências <span id="count-pendentes">0</span>
   </button>
 
   <main id="render-area">
@@ -706,16 +706,16 @@
 
       <div class="hero-main">
         <div class="hero-copy">
-          <h1>Checklist de Carregamento - Granel</h1>
-          <p>Preencha os dados da operação, informe a quantidade de lacres, registre uma foto para cada lacre e gere o PDF final com paginação fixa.</p>
+          <h1>Checklist de carregamento a granel</h1>
+          <p>Preencha os dados da operação, informe a quantidade de lacres, registre as fotos correspondentes e gere o PDF final com paginação padronizada.</p>
         </div>
 
         <div class="hero-guide">
           <strong>Estrutura do PDF</strong>
           <ul>
-            <li><span>01</span> Página 1 com informações do carregamento.</li>
-            <li><span>02</span> Páginas internas com 2 lacres por folha.</li>
-            <li><span>03</span> Tipo de carga fixo: GRANEL.</li>
+            <li><span>01</span> Página inicial com as informações do carregamento.</li>
+            <li><span>02</span> Páginas internas com dois lacres por página.</li>
+            <li><span>03</span> Tipo de carga: Granel.</li>
           </ul>
         </div>
       </div>
@@ -724,8 +724,8 @@
     <div class="content-shell">
       <div class="android-banner" id="android-banner">
         <div>
-          <strong>Abra no Chrome para salvar o PDF</strong>
-          <p>Se este link estiver aberto dentro do WhatsApp, toque no botão ao lado para abrir no Chrome do Android. Esse é o modo mais confiável para gerar o PDF no celular.</p>
+          <strong>Abra no Chrome para gerar o PDF</strong>
+          <p>Se este link estiver aberto dentro do WhatsApp, toque no botão ao lado para abri-lo no Chrome do Android. Essa é a forma mais confiável de gerar o PDF no celular.</p>
         </div>
         <button type="button" onclick="abrirNoChromeAndroid()">Abrir no Chrome</button>
       </div>
@@ -739,13 +739,13 @@
           </div>
 
           <div class="status-note">
-            A quantidade informada deve corresponder ao número de lacres cadastrados para o PDF ser liberado.
+            A quantidade informada deve corresponder aos lacres cadastrados para liberar a geração do PDF.
           </div>
         </div>
 
         <div class="dados-grid" id="container-campos">
           <div class="campo">
-            <label for="c">Nome do cliente *</label>
+            <label for="c">Cliente *</label>
             <div class="input-shell"><input type="text" id="c" value="HEINZ BRASIL S/A" placeholder="HEINZ BRASIL S/A" readonly required></div>
           </div>
 
@@ -776,7 +776,7 @@
 
           <div class="campo full">
             <label for="nota-fiscal">Número da nota fiscal *</label>
-            <div class="input-shell"><input type="text" id="nota-fiscal" placeholder="Informe quando disponível" required></div>
+            <div class="input-shell"><input type="text" id="nota-fiscal" placeholder="Digite o número da nota fiscal" required></div>
           </div>
         </div>
       </section>
@@ -786,7 +786,7 @@
           <div>
             <div class="panel-kicker">Etapa 2</div>
             <h3>Lacres conferidos</h3>
-            <p>No PDF, os lacres são organizados em pares por página, com a foto do lacre ampliada.</p>
+            <p>No PDF, os lacres são organizados em pares por página, com fotos ampliadas para conferência.</p>
           </div>
         </div>
 
@@ -797,7 +797,7 @@
 
   <div class="botoes-fixos">
     <button type="button" class="btn btn-add" id="btn-add-lacre" onclick="addLacre()">Adicionar lacre</button>
-    <button type="button" class="btn btn-standby" onclick="salvarParaDepois()">Salvar pendente</button>
+    <button type="button" class="btn btn-standby" onclick="salvarParaDepois()">Salvar como pendente</button>
     <button type="button" class="btn btn-pdf" onclick="gerarPDF()">Salvar PDF</button>
   </div>
 
@@ -1575,7 +1575,7 @@
           <div class="pdf-lacre-top">
             <div>
               <h3>Lacre ${lacre.numero}</h3>
-              <p>Conferência visual registrada para o checklist.</p>
+              <p>Conferência visual registrada no checklist.</p>
             </div>
             <div class="pdf-lacre-badge">Lacre ${lacre.numero}</div>
           </div>
@@ -1601,7 +1601,7 @@
           <div class="pdf-sheet">
             <img class="pdf-watermark" src="${WATERMARK_LOGO_DATA_URL}" alt="">
             <div class="pdf-topline">
-              <div class="pdf-brandline">Dulcini S/A • Checklist de Carregamento - Granel</div>
+              <div class="pdf-brandline">Dulcini S/A • Checklist de carregamento a granel</div>
               <div class="pdf-pagecount">Página 1 / ${totalPaginas}</div>
             </div>
 
@@ -1609,8 +1609,8 @@
               <div class="pdf-hero">
                 <div>
                   <div class="pdf-hero-kicker">Relatório operacional</div>
-                  <h1>Checklist de Carregamento - Granel</h1>
-                  <p>Documento gerado com os dados do carregamento e comprovação fotográfica dos lacres conferidos.</p>
+                  <h1>Checklist de carregamento a granel</h1>
+                  <p>Documento gerado com os dados do carregamento e a comprovação fotográfica dos lacres conferidos.</p>
                 </div>
 
                 <div class="pdf-hero-side">
@@ -1639,7 +1639,7 @@
                 </div>
 
                 <div class="pdf-meta-grid">
-                  ${montarMetaCard('Nome do cliente', campos.c)}
+                  ${montarMetaCard('Cliente', campos.c)}
                   ${montarMetaCard('Data do carregamento', campos.data)}
                   ${montarMetaCard('Motorista', campos.m)}
                   ${montarMetaCard('Placa do veículo', campos.p)}
@@ -1676,7 +1676,7 @@
                 <div class="pdf-page-header">
                   <div>
                     <h2>Lacres conferidos</h2>
-                    <p>Lacres organizados em pares por página, com foto ampliada e nítida.</p>
+                    <p>Lacres organizados em pares por página, com fotos ampliadas para conferência visual.</p>
                   </div>
                   <div class="pdf-page-tags">
                     <div class="pdf-tag">${escaparHTML(campos.tp)}</div>
@@ -1747,7 +1747,7 @@
       const snapshot = coletarEstadoAtual();
 
       if (!snapshot.campos.p || !snapshot.campos.colaborador) {
-        alert('Preencha a placa e o colaborador responsável antes de salvar como pendente.');
+        alert('Preencha a placa e o colaborador responsável antes de salvar o checklist como pendente.');
         return;
       }
 
@@ -1760,7 +1760,7 @@
 
         await salvarPendenteDB(registro);
         await recarregarPendentes();
-        alert('Checklist pendente salvo com sucesso.');
+        alert('Checklist salvo como pendente.');
         limparChecklist(false);
       } catch (erro) {
         console.error('Erro ao salvar no IndexedDB:', erro);
@@ -1777,7 +1777,7 @@
 
       const corpo = document.getElementById('lista-pendentes-corpo');
       if (!pendentes.length) {
-        corpo.innerHTML = '<p style="text-align:center; color:#65756E; padding:24px 10px;">Nenhum checklist pendente.</p>';
+        corpo.innerHTML = '<p style="text-align:center; color:#65756E; padding:24px 10px;">Nenhum checklist pendente no momento.</p>';
       } else {
         corpo.innerHTML = pendentes.map((item) => {
           const snapshot = normalizarPendente(item);
@@ -1790,10 +1790,10 @@
             <div class="pendente-card">
               <strong>Placa ${placa}</strong>
               <small>NF: ${nf}</small>
-              <small>${escaparHTML(item.dt || '')} - Lacres: ${totalLacres}</small>
+              <small>${escaparHTML(item.dt || '')} - Lacres registrados: ${totalLacres}</small>
               <div class="pendente-acoes">
                 <button type="button" class="pendente-retomar" onclick="recuperar(${item.id})">Retomar</button>
-                <button type="button" class="pendente-excluir" aria-label="Excluir pendente" title="Excluir pendente" onclick="excluirItem(${item.id})">X</button>
+                <button type="button" class="pendente-excluir" aria-label="Excluir checklist pendente" title="Excluir checklist pendente" onclick="excluirItem(${item.id})">X</button>
               </div>
             </div>
           `;
@@ -1817,7 +1817,7 @@
         await abrirPendentes();
       } catch (erro) {
         console.error(erro);
-        alert('Não foi possível excluir este pendente.');
+        alert('Não foi possível excluir este checklist pendente.');
       }
     }
 
@@ -1846,7 +1846,7 @@
         fecharPendentes();
       } catch (erro) {
         console.error(erro);
-        alert('Não foi possível recuperar este pendente.');
+        alert('Não foi possível retomar este checklist pendente.');
       }
     }
 
@@ -1920,7 +1920,7 @@
           return;
         }
 
-        atualizarStatusLoading('Lendo números dos lacres nas fotos...');
+        atualizarStatusLoading('Lendo os números dos lacres nas fotos...');
         const dadosPDF = await obterDadosPDFComOCR();
 
         atualizarStatusLoading('Montando as páginas do checklist...');
@@ -1931,7 +1931,7 @@
 
         const paginas = Array.from(root.querySelectorAll('.pdf-page'));
         if (!paginas.length) {
-          throw new Error('Nenhuma página foi montada.');
+          throw new Error('Nenhuma página foi gerada para o PDF.');
         }
 
         const configPDF = obterConfiguracaoPDF();
@@ -1939,7 +1939,7 @@
         const nomeBase = campos.nf || campos.p || campos.data || 'checklist_granel';
         const nomeArquivo = `Checklist_Granel_${limparNomeArquivo(nomeBase)}.pdf`;
 
-        atualizarStatusLoading('Convertendo páginas em PDF...');
+        atualizarStatusLoading('Convertendo as páginas em PDF...');
         const alturaPrimeiraPagina = obterAlturaPaginaPDF(paginas[0]);
         const doc = new jsPDF({
           orientation: obterOrientacaoPaginaPDF(alturaPrimeiraPagina),
@@ -1949,7 +1949,7 @@
         });
 
         for (let i = 0; i < paginas.length; i++) {
-          atualizarStatusLoading(`Gerando página ${i + 1} de ${paginas.length}...`);
+          atualizarStatusLoading(`Gerando a página ${i + 1} de ${paginas.length}...`);
           const alturaPagina = obterAlturaPaginaPDF(paginas[i]);
 
           const imagem = await renderizarPaginaParaImagem(
@@ -1961,7 +1961,7 @@
           doc.addImage(imagem, 'PNG', 0, 0, 210, alturaPagina);
         }
 
-        atualizarStatusLoading('Salvando arquivo PDF...');
+        atualizarStatusLoading('Salvando o arquivo PDF...');
         const blob = doc.output('blob');
         baixarBlob(blob, nomeArquivo);
 
@@ -1972,7 +1972,7 @@
 
       } catch (erro) {
         console.error('Erro ao gerar PDF:', erro);
-        alert('Não foi possível gerar o PDF neste aparelho.');
+        alert('Não foi possível gerar o PDF neste dispositivo.');
       } finally {
         await encerrarWorkerOCR();
         setTimeout(() => {
