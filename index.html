@@ -96,6 +96,23 @@
       padding:3px;margin-left:-4px;
     }
 
+    .brand-home-link,
+    .app-title-link{
+      color:inherit;text-decoration:none;
+    }
+
+    .brand-home-link{
+      cursor:pointer;transition:transform .2s ease,border-color .2s ease,background .2s ease;
+    }
+
+    .brand-home-link:hover{
+      transform:translateY(-1px);
+      border-color:rgba(255,255,255,.34);
+      background:rgba(255,255,255,.18);
+    }
+
+    .app-title-link{display:inline-block}
+
     .hero-caption{font-size:13px;color:rgba(255,255,255,.82)}
 
     .hero-main{
@@ -674,7 +691,11 @@
     }
 
     @media (max-width: 860px){
-      #btn-abrir-pendentes{top:12px;right:10px}
+      #btn-abrir-pendentes{
+        position:relative;top:auto;right:auto;z-index:10;
+        display:flex;align-items:center;justify-content:center;width:max-content;max-width:calc(100vw - 20px);
+        margin:0 0 10px auto;padding:10px 14px;font-size:11px;
+      }
       .hero-main,.dados-grid{grid-template-columns:1fr}
       .panel-head,.header-lacre{flex-direction:column;align-items:stretch}
       .status-note{min-width:0}
@@ -683,7 +704,7 @@
     }
 
     @media (max-width: 680px){
-      body{padding:16px 10px 24px}
+      body{padding:12px 10px 140px}
       .hero-app,.content-shell,.panel{padding:20px}
       .hero-copy h1{font-size:28px}
       .botoes-fixos{width:calc(100% - 12px);padding:10px;gap:10px;border-radius:22px}
@@ -700,13 +721,13 @@
   <main id="render-area">
     <section class="hero-app">
       <div class="hero-brand">
-        <div class="hero-pill"><img class="hero-logo" src="Logo_Beija-flor_Transp_.jpg" alt="">Dulcini S/A</div>
+        <a class="hero-pill brand-home-link" href="https://nicolasprior.github.io/checklist-menu/" aria-label="Voltar ao Checklist Menu"><img class="hero-logo" src="Logo_Beija-flor_Transp_.jpg" alt="">Dulcini S/A</a>
         <div class="hero-caption">Checklist de carregamento a granel com evidência fotográfica dos lacres.</div>
       </div>
 
       <div class="hero-main">
         <div class="hero-copy">
-          <h1>Checklist de carregamento a granel</h1>
+          <h1><a class="app-title-link" href="https://nicolasprior.github.io/checklist-menu/" aria-label="Voltar ao Checklist Menu">Checklist de carregamento a granel</a></h1>
           <p>Preencha os dados da operação, informe a quantidade de lacres, registre as fotos correspondentes e gere o PDF final com paginação padronizada.</p>
         </div>
 
@@ -761,7 +782,7 @@
 
           <div class="campo">
             <label for="p">Placa do veículo *</label>
-            <div class="input-shell"><input type="text" id="p" placeholder="ABC-1234" required></div>
+            <div class="input-shell"><input type="text" id="p" placeholder="ABC-1234" maxlength="8" autocapitalize="characters" autocomplete="off" required></div>
           </div>
 
           <div class="campo">
@@ -776,7 +797,7 @@
 
           <div class="campo full">
             <label for="nota-fiscal">Número da nota fiscal *</label>
-            <div class="input-shell"><input type="text" id="nota-fiscal" placeholder="Digite o número da nota fiscal" required></div>
+            <div class="input-shell"><input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="nota-fiscal" placeholder="Digite o número da nota fiscal" autocomplete="off" required></div>
           </div>
         </div>
       </section>
@@ -848,8 +869,11 @@
     let dbInstance = null;
     let pendentes = [];
     const OCR_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-    const OCR_LACRE_NAO_IDENTIFICADO = 'Número do lacre não identificado';
-    const OCR_CONFIDENCE_MIN = 65;
+    const OCR_LACRE_NAO_IDENTIFICADO = 'Lacre não identificado';
+    const OCR_CONFIDENCE_MIN = 70;
+    const OCR_LACRE_TAMANHO_MIN = 6;
+    const OCR_LACRE_TAMANHO_PREFERENCIAL = 7;
+    const OCR_LACRE_TAMANHO_MAX = 8;
     let ocrScriptPromise = null;
     let ocrWorkerPromise = null;
 
@@ -959,10 +983,61 @@
     }
 
     function normalizarTextoMaiusculo(valor = '') {
-      return String(valor || '').trim().toLocaleUpperCase('pt-BR');
+      return String(valor || '').toLocaleUpperCase('pt-BR');
+    }
+
+    function normalizarPlaca(valor = '') {
+      return normalizarTextoMaiusculo(valor).replace(/[^A-Z0-9-]/g, '').slice(0, 8);
+    }
+
+    function normalizarNotaFiscal(valor = '') {
+      return String(valor || '').replace(/\D+/g, '').slice(0, 6);
+    }
+
+    function aplicarValorSanitizado(input, normalizador) {
+      if (!input) return;
+      const inicio = input.selectionStart;
+      const fim = input.selectionEnd;
+      const tamanhoOriginal = String(input.value || '').length;
+      const valor = normalizador(input.value);
+
+      if (input.value !== valor) {
+        input.value = valor;
+        if (document.activeElement === input && typeof inicio === 'number' && typeof fim === 'number') {
+          const ajuste = Math.max(0, inicio - (tamanhoOriginal - valor.length));
+          input.setSelectionRange(Math.min(valor.length, ajuste), Math.min(valor.length, ajuste));
+        }
+      }
+    }
+
+    function configurarValidacoesCamposEspecificos() {
+      const placa = document.getElementById('p');
+      const notaFiscal = document.getElementById('nota-fiscal');
+
+      if (placa && placa.dataset.placaReady !== '1') {
+        placa.dataset.placaReady = '1';
+        placa.setAttribute('maxlength', '8');
+        placa.setAttribute('autocomplete', 'off');
+        placa.addEventListener('input', () => aplicarValorSanitizado(placa, normalizarPlaca));
+        placa.addEventListener('blur', () => aplicarValorSanitizado(placa, normalizarPlaca));
+      }
+
+      if (notaFiscal && notaFiscal.dataset.notaFiscalReady !== '1') {
+        notaFiscal.dataset.notaFiscalReady = '1';
+        notaFiscal.setAttribute('maxlength', '6');
+        notaFiscal.setAttribute('inputmode', 'numeric');
+        notaFiscal.setAttribute('pattern', '[0-9]*');
+        notaFiscal.setAttribute('autocomplete', 'off');
+        notaFiscal.addEventListener('input', () => aplicarValorSanitizado(notaFiscal, normalizarNotaFiscal));
+        notaFiscal.addEventListener('blur', () => aplicarValorSanitizado(notaFiscal, normalizarNotaFiscal));
+      }
+
+      aplicarValorSanitizado(placa, normalizarPlaca);
+      aplicarValorSanitizado(notaFiscal, normalizarNotaFiscal);
     }
 
     function aplicarMaiusculoNoCampo(campo) {
+      if (campo?.id === 'nota-fiscal') return;
       const inicio = campo.selectionStart;
       const fim = campo.selectionEnd;
       campo.value = normalizarTextoMaiusculo(campo.value);
@@ -973,9 +1048,17 @@
 
     function configurarCamposMaiusculos() {
       document.querySelectorAll('#container-campos input[type="text"]:not([readonly])').forEach((input) => {
+        if (input.dataset.uppercaseReady === '1') {
+          aplicarMaiusculoNoCampo(input);
+          return;
+        }
+
+        input.dataset.uppercaseReady = '1';
         aplicarMaiusculoNoCampo(input);
         input.addEventListener('input', () => aplicarMaiusculoNoCampo(input));
       });
+
+      configurarValidacoesCamposEspecificos();
     }
 
     function montarOpcoesLocais(valorSelecionado = '') {
@@ -1094,7 +1177,9 @@
         if (worker.setParameters) {
           await worker.setParameters({
             tessedit_char_whitelist: '0123456789',
-            preserve_interword_spaces: '1'
+            preserve_interword_spaces: '1',
+            tessedit_pageseg_mode: '6',
+            user_defined_dpi: '300'
           });
         }
         return worker;
@@ -1117,7 +1202,10 @@
     }
 
     function limparNumeroLacreOCR(valor = '') {
-      return String(valor || '').replace(/\D+/g, '');
+      const substituicoes = { O: '0', o: '0', I: '1', l: '1', '|': '1', S: '5', s: '5', B: '8' };
+      return String(valor || '')
+        .replace(/[OoIl|SsB]/g, (caractere) => substituicoes[caractere] || caractere)
+        .replace(/\D+/g, '');
     }
 
     function calcularConfiancaOCR(dados = {}, numero = '') {
@@ -1131,26 +1219,150 @@
         .map((palavra) => Number(palavra.confidence || 0))
         .filter((valor) => Number.isFinite(valor) && valor > 0);
 
-      return confiancas.length ? Math.max(base, ...confiancas) : base;
+      return confiancas.length ? Math.max(Number.isFinite(base) ? base : 0, ...confiancas) : (Number.isFinite(base) ? base : 0);
     }
 
-    function extrairCandidatosNumeroLacre(dados = {}) {
+    function registrarCandidatoLacreOCR(mapa, numero, confianca = 0, origem = 'OCR') {
+      const digitos = limparNumeroLacreOCR(numero);
+      if (digitos.length < OCR_LACRE_TAMANHO_MIN || digitos.length > OCR_LACRE_TAMANHO_MAX) return;
+
+      const atual = mapa.get(digitos) || {
+        numero: digitos,
+        confiancaBase: 0,
+        ocorrencias: 0,
+        origens: new Set()
+      };
+
+      atual.confiancaBase = Math.max(atual.confiancaBase, Number(confianca || 0));
+      atual.ocorrencias += 1;
+      atual.origens.add(origem);
+      mapa.set(digitos, atual);
+    }
+
+    function ordenarCandidatosLacreOCR(mapa) {
+      return Array.from(mapa.values())
+        .map((candidato) => {
+          const bonusComprimento = candidato.numero.length === OCR_LACRE_TAMANHO_PREFERENCIAL ? 14 : 4;
+          const bonusZeros = /^0{2,}/.test(candidato.numero) ? 8 : 0;
+          const bonusOcorrencias = Math.min(14, Math.max(0, candidato.ocorrencias - 1) * 5);
+          const bonusPreprocessamento = Array.from(candidato.origens).some((origem) => origem !== 'foto original') ? 5 : 0;
+          const confianca = Math.min(100, candidato.confiancaBase + bonusComprimento + bonusZeros + bonusOcorrencias + bonusPreprocessamento);
+
+          return {
+            numero: candidato.numero,
+            confianca,
+            ocorrencias: candidato.ocorrencias,
+            origens: Array.from(candidato.origens)
+          };
+        })
+        .sort((a, b) => b.confianca - a.confianca || b.ocorrencias - a.ocorrencias || b.numero.length - a.numero.length);
+    }
+
+    function extrairCandidatosNumeroLacre(dados = {}, origem = 'foto original') {
       const texto = String(dados.text || '');
-      const encontrados = texto.match(/\d[\d\s.\-_/]{2,}\d/g) || [];
       const mapa = new Map();
+      const textoNormalizado = texto.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Ss]/g, '5').replace(/B/g, '8');
+      const encontrados = textoNormalizado.match(/[0-9][0-9\s.\-_/]{4,}[0-9]/g) || [];
 
       encontrados.forEach((trecho) => {
         const numero = limparNumeroLacreOCR(trecho);
-        if (numero.length < 4 || numero.length > 20) return;
-
-        const confianca = calcularConfiancaOCR(dados, numero);
-        const atual = mapa.get(numero);
-        if (!atual || confianca > atual.confianca) {
-          mapa.set(numero, { numero, confianca });
+        if (numero.length > OCR_LACRE_TAMANHO_MAX) {
+          const fatias = numero.match(new RegExp('\\d{' + OCR_LACRE_TAMANHO_PREFERENCIAL + '}', 'g')) || [];
+          fatias.forEach((fatia) => registrarCandidatoLacreOCR(mapa, fatia, calcularConfiancaOCR(dados, fatia), origem));
+          return;
         }
+
+        registrarCandidatoLacreOCR(mapa, numero, calcularConfiancaOCR(dados, numero), origem);
       });
 
-      return Array.from(mapa.values()).sort((a, b) => b.confianca - a.confianca || b.numero.length - a.numero.length);
+      (Array.isArray(dados.words) ? dados.words : []).forEach((palavra) => {
+        const numero = limparNumeroLacreOCR(palavra?.text || '');
+        registrarCandidatoLacreOCR(mapa, numero, Number(palavra?.confidence || 0), origem);
+      });
+
+      return ordenarCandidatosLacreOCR(mapa);
+    }
+
+    function carregarImagemOCR(src) {
+      return new Promise((resolve, reject) => {
+        const imagem = new Image();
+        imagem.onload = () => resolve(imagem);
+        imagem.onerror = () => reject(new Error('Não foi possível carregar a imagem para OCR.'));
+        imagem.src = src;
+      });
+    }
+
+    function calcularRecorteOCR(imagem, recorte) {
+      const larguraNatural = imagem.naturalWidth || imagem.width;
+      const alturaNatural = imagem.naturalHeight || imagem.height;
+
+      return {
+        x: Math.max(0, Math.round(larguraNatural * recorte.x)),
+        y: Math.max(0, Math.round(alturaNatural * recorte.y)),
+        w: Math.max(1, Math.round(larguraNatural * recorte.w)),
+        h: Math.max(1, Math.round(alturaNatural * recorte.h))
+      };
+    }
+
+    // As fotos reais têm lacre azul com número branco; este pré-processamento inverte os dígitos claros para texto escuro.
+    function criarImagemPreprocessadaOCR(imagem, recorte, modo = 'digitos-claros') {
+      const area = calcularRecorteOCR(imagem, recorte);
+      const escala = Math.min(3, Math.max(1.4, 1700 / area.w));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(area.w * escala);
+      canvas.height = Math.round(area.h * escala);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(imagem, area.x, area.y, area.w, area.h, 0, 0, canvas.width, canvas.height);
+
+      const imagemData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels = imagemData.data;
+
+      for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const cinza = (r * 0.299) + (g * 0.587) + (b * 0.114);
+        let valor;
+
+        if (modo === 'digitos-claros') {
+          const possivelTextoBranco = cinza > 142 && r > 120 && g > 120 && b > 120;
+          valor = possivelTextoBranco ? 0 : 255;
+        } else if (modo === 'alto-contraste') {
+          const realcado = Math.max(0, Math.min(255, (cinza - 96) * 2.4 + 128));
+          valor = 255 - realcado;
+        } else {
+          valor = 255 - cinza;
+        }
+
+        pixels[i] = valor;
+        pixels[i + 1] = valor;
+        pixels[i + 2] = valor;
+        pixels[i + 3] = 255;
+      }
+
+      ctx.putImageData(imagemData, 0, 0);
+      return canvas.toDataURL('image/png');
+    }
+
+    async function gerarVariantesOCR(src) {
+      const imagem = await carregarImagemOCR(src);
+      const recortes = [
+        { nome: 'lacre completo em alto contraste', x: 0.00, y: 0.00, w: 1.00, h: 1.00, modo: 'alto-contraste' },
+        { nome: 'faixa central da numeração', x: 0.03, y: 0.28, w: 0.78, h: 0.38, modo: 'digitos-claros' },
+        { nome: 'área esquerda da numeração', x: 0.00, y: 0.34, w: 0.74, h: 0.34, modo: 'digitos-claros' },
+        { nome: 'faixa inferior da numeração', x: 0.00, y: 0.46, w: 0.78, h: 0.34, modo: 'digitos-claros' }
+      ];
+
+      return [
+        { nome: 'foto original', src },
+        ...recortes.map((recorte) => ({
+          nome: recorte.nome,
+          src: criarImagemPreprocessadaOCR(imagem, recorte, recorte.modo)
+        }))
+      ];
     }
 
     async function identificarNumeroLacreNaFoto(src, contexto) {
@@ -1161,14 +1373,26 @@
 
       try {
         const worker = await obterWorkerOCR();
-        const resultado = await worker.recognize(src);
-        const dados = resultado?.data || {};
-        const candidatos = extrairCandidatosNumeroLacre(dados);
+        const variantes = await gerarVariantesOCR(src);
+        const mapaCandidatos = new Map();
+        const textos = [];
+
+        for (const variante of variantes) {
+          const resultado = await worker.recognize(variante.src);
+          const dados = resultado?.data || {};
+          textos.push({ variante: variante.nome, texto: dados.text || '', confianca: Number(dados.confidence || 0) });
+
+          extrairCandidatosNumeroLacre(dados, variante.nome).forEach((candidato) => {
+            registrarCandidatoLacreOCR(mapaCandidatos, candidato.numero, candidato.confianca, variante.nome);
+          });
+        }
+
+        const candidatos = ordenarCandidatosLacreOCR(mapaCandidatos);
         const principal = candidatos[0];
 
         if (!principal) {
-          registrarFalhaOCR(contexto, 'nenhum candidato numérico encontrado', { texto: dados.text || '' });
-          return { identificado: false, numero: '', confianca: Number(dados.confidence || 0) };
+          registrarFalhaOCR(contexto, 'nenhum candidato numérico encontrado', { textos });
+          return { identificado: false, numero: '', confianca: 0 };
         }
 
         if (principal.confianca < OCR_CONFIDENCE_MIN) {
@@ -1334,10 +1558,10 @@
         c: normalizarTextoMaiusculo(document.getElementById('c').value.trim()),
         data: document.getElementById('data-carregamento').value.trim(),
         m: normalizarTextoMaiusculo(document.getElementById('m').value.trim()),
-        p: normalizarTextoMaiusculo(document.getElementById('p').value.trim()),
+        p: normalizarPlaca(document.getElementById('p').value.trim()),
         colaborador: normalizarTextoMaiusculo(document.getElementById('colaborador').value.trim()),
         q: document.getElementById('qtd-lacres').value.trim(),
-        nf: normalizarTextoMaiusculo(document.getElementById('nota-fiscal').value.trim()),
+        nf: normalizarNotaFiscal(document.getElementById('nota-fiscal').value.trim()),
         tp: TIPO_CARGA_FIXO
       };
     }
@@ -1346,10 +1570,10 @@
       document.getElementById('c').value = normalizarTextoMaiusculo(campos.c || CLIENTE_PADRAO);
       document.getElementById('data-carregamento').value = campos.data || formatarData(new Date());
       document.getElementById('m').value = normalizarTextoMaiusculo(campos.m || '');
-      document.getElementById('p').value = normalizarTextoMaiusculo(campos.p || '');
+      document.getElementById('p').value = normalizarPlaca(campos.p || '');
       document.getElementById('colaborador').value = normalizarTextoMaiusculo(campos.colaborador || '');
       document.getElementById('qtd-lacres').value = campos.q || '';
-      document.getElementById('nota-fiscal').value = normalizarTextoMaiusculo(campos.nf || '');
+      document.getElementById('nota-fiscal').value = normalizarNotaFiscal(campos.nf || '');
       configurarCamposMaiusculos();
     }
 
@@ -1498,6 +1722,38 @@
       });
 
       return valido;
+    }
+
+    function validarCamposFormatados(exigirObrigatorios = false) {
+      configurarValidacoesCamposEspecificos();
+
+      const placa = document.getElementById('p');
+      const notaFiscal = document.getElementById('nota-fiscal');
+      const placaValor = normalizarPlaca(placa?.value || '');
+      const notaValor = normalizarNotaFiscal(notaFiscal?.value || '');
+      const mensagens = [];
+
+      if (placa) {
+        placa.value = placaValor;
+        placa.closest('.campo')?.classList.toggle('campo-erro', placaValor.length > 8 || (exigirObrigatorios && placa.required && !placaValor));
+      }
+
+      if (notaFiscal) {
+        notaFiscal.value = notaValor;
+        notaFiscal.closest('.campo')?.classList.toggle('campo-erro', notaValor.length > 6 || (exigirObrigatorios && notaFiscal.required && !notaValor));
+      }
+
+      if (exigirObrigatorios && placa?.required && !placaValor) mensagens.push('Informe a placa do veículo com no máximo 8 caracteres.');
+      if (placaValor.length > 8) mensagens.push('A placa deve ter no máximo 8 caracteres.');
+      if (exigirObrigatorios && notaFiscal?.required && !notaValor) mensagens.push('Informe a nota fiscal com apenas números e no máximo 6 dígitos.');
+      if (notaValor && !/^\d{1,6}$/.test(notaValor)) mensagens.push('A nota fiscal deve conter apenas números e no máximo 6 dígitos.');
+
+      if (mensagens.length) {
+        alert(mensagens.join('\n'));
+        return false;
+      }
+
+      return true;
     }
 
     function listarLocaisLacresFaltantes() {
@@ -1744,6 +2000,10 @@
     }
 
     async function salvarParaDepois() {
+      if (!validarCamposFormatados()) {
+        return;
+      }
+
       const snapshot = coletarEstadoAtual();
 
       if (!snapshot.campos.p || !snapshot.campos.colaborador) {
@@ -1900,6 +2160,10 @@
       try {
         if (!validarCamposObrigatorios()) {
           alert('Preencha todos os campos obrigatórios.');
+          return;
+        }
+
+        if (!validarCamposFormatados(true)) {
           return;
         }
 
