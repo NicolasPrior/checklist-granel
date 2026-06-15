@@ -870,7 +870,8 @@
     let pendentes = [];
     const OCR_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
     const OCR_LACRE_NAO_IDENTIFICADO = 'Lacre não identificado';
-    const OCR_CONFIDENCE_MIN = 70;
+    const OCR_CONFIDENCE_MIN = 58;
+    const OCR_AMBIGUITY_GAP_MIN = 10;
     const OCR_LACRE_TAMANHO_MIN = 6;
     const OCR_LACRE_TAMANHO_PREFERENCIAL = 7;
     const OCR_LACRE_TAMANHO_MAX = 8;
@@ -1108,9 +1109,9 @@
     function obterConfiguracaoFotos() {
       const ambiente = detectarAmbientePDF();
       return {
-        larguraMaximaFoto: ambiente.mobile ? 3600 : 4600,
-        alturaMaximaFoto: ambiente.mobile ? 3600 : 4600,
-        qualidadeFoto: ambiente.mobile ? 0.9 : 0.96
+        larguraMaximaFoto: ambiente.mobile ? 4200 : 5200,
+        alturaMaximaFoto: ambiente.mobile ? 4200 : 5200,
+        qualidadeFoto: ambiente.mobile ? 0.94 : 0.97
       };
     }
 
@@ -1178,8 +1179,9 @@
           await worker.setParameters({
             tessedit_char_whitelist: '0123456789',
             preserve_interword_spaces: '1',
-            tessedit_pageseg_mode: '6',
-            user_defined_dpi: '300'
+            classify_bln_numeric_mode: '1',
+            tessedit_pageseg_mode: '7',
+            user_defined_dpi: '420'
           });
         }
         return worker;
@@ -1262,17 +1264,25 @@
       const texto = String(dados.text || '');
       const mapa = new Map();
       const textoNormalizado = texto.replace(/[Oo]/g, '0').replace(/[Il|]/g, '1').replace(/[Ss]/g, '5').replace(/B/g, '8');
-      const encontrados = textoNormalizado.match(/[0-9][0-9\s.\-_/]{4,}[0-9]/g) || [];
+      const linhas = textoNormalizado.split(/\n+/).map((linha) => linha.trim()).filter(Boolean);
 
-      encontrados.forEach((trecho) => {
+      const registrarTrecho = (trecho) => {
         const numero = limparNumeroLacreOCR(trecho);
+        if (!numero) return;
+
         if (numero.length > OCR_LACRE_TAMANHO_MAX) {
-          const fatias = numero.match(new RegExp('\\d{' + OCR_LACRE_TAMANHO_PREFERENCIAL + '}', 'g')) || [];
-          fatias.forEach((fatia) => registrarCandidatoLacreOCR(mapa, fatia, calcularConfiancaOCR(dados, fatia), origem));
+          const padraoComZeros = new RegExp('0{2,}\\d{' + (OCR_LACRE_TAMANHO_MIN - 2) + ',' + (OCR_LACRE_TAMANHO_MAX - 2) + '}', 'g');
+          const candidatosComZeros = numero.match(padraoComZeros) || [];
+          candidatosComZeros.forEach((candidato) => registrarCandidatoLacreOCR(mapa, candidato, calcularConfiancaOCR(dados, candidato), origem));
           return;
         }
 
         registrarCandidatoLacreOCR(mapa, numero, calcularConfiancaOCR(dados, numero), origem);
+      };
+
+      linhas.forEach((linha) => {
+        const encontrados = linha.match(/[0-9][0-9\s.\-_/]{4,}[0-9]/g) || [];
+        encontrados.forEach(registrarTrecho);
       });
 
       (Array.isArray(dados.words) ? dados.words : []).forEach((palavra) => {
@@ -1295,19 +1305,181 @@
     function calcularRecorteOCR(imagem, recorte) {
       const larguraNatural = imagem.naturalWidth || imagem.width;
       const alturaNatural = imagem.naturalHeight || imagem.height;
+      const xInicial = Math.max(0, Math.min(0.995, Number(recorte.x || 0)));
+      const yInicial = Math.max(0, Math.min(0.995, Number(recorte.y || 0)));
+      const largura = Math.max(0.005, Math.min(1 - xInicial, Number(recorte.w || 1)));
+      const altura = Math.max(0.005, Math.min(1 - yInicial, Number(recorte.h || 1)));
 
       return {
-        x: Math.max(0, Math.round(larguraNatural * recorte.x)),
-        y: Math.max(0, Math.round(alturaNatural * recorte.y)),
-        w: Math.max(1, Math.round(larguraNatural * recorte.w)),
-        h: Math.max(1, Math.round(alturaNatural * recorte.h))
+        x: Math.max(0, Math.round(larguraNatural * xInicial)),
+        y: Math.max(0, Math.round(alturaNatural * yInicial)),
+        w: Math.max(1, Math.round(larguraNatural * largura)),
+        h: Math.max(1, Math.round(alturaNatural * altura))
       };
     }
 
-    // As fotos reais têm lacre azul com número branco; este pré-processamento inverte os dígitos claros para texto escuro.
+    function limitarRecorteOCR(recorte) {
+      const x = Math.max(0, Math.min(0.995, Number(recorte.x || 0)));
+      const y = Math.max(0, Math.min(0.995, Number(recorte.y || 0)));
+      return {
+        ...recorte,
+        x,
+        y,
+        w: Math.max(0.005, Math.min(1 - x, Number(recorte.w || 1))),
+        h: Math.max(0.005, Math.min(1 - y, Number(recorte.h || 1)))
+      };
+    }
+
+    function expandirRecorteOCR(recorte, margemX = 0.04, margemY = 0.08) {
+      return limitarRecorteOCR({
+        ...recorte,
+        x: recorte.x - margemX,
+        y: recorte.y - margemY,
+        w: recorte.w + (margemX * 2),
+        h: recorte.h + (margemY * 2)
+      });
+    }
+
+    function pixelAzulLacreOCR(r, g, b) {
+      const maximo = Math.max(r, g, b);
+      const minimo = Math.min(r, g, b);
+      const saturacao = maximo === 0 ? 0 : (maximo - minimo) / maximo;
+      return b > 78
+        && b >= r * 1.16
+        && b >= g * 0.86
+        && (b - r) > 24
+        && saturacao > 0.18;
+    }
+
+    function detectarRecortesLacreAzulOCR(imagem) {
+      const larguraNatural = imagem.naturalWidth || imagem.width;
+      const alturaNatural = imagem.naturalHeight || imagem.height;
+      const escala = Math.min(1, 920 / Math.max(larguraNatural, alturaNatural));
+      const largura = Math.max(1, Math.round(larguraNatural * escala));
+      const altura = Math.max(1, Math.round(alturaNatural * escala));
+      const canvas = document.createElement('canvas');
+      canvas.width = largura;
+      canvas.height = altura;
+
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(imagem, 0, 0, largura, altura);
+
+      const dados = ctx.getImageData(0, 0, largura, altura).data;
+      const tamanho = largura * altura;
+      const mascara = new Uint8Array(tamanho);
+      const visitado = new Uint8Array(tamanho);
+
+      for (let i = 0, p = 0; i < dados.length; i += 4, p += 1) {
+        if (pixelAzulLacreOCR(dados[i], dados[i + 1], dados[i + 2])) {
+          mascara[p] = 1;
+        }
+      }
+
+      const componentes = [];
+      const fila = [];
+      const minimoPixels = Math.max(36, Math.round(tamanho * 0.00025));
+
+      for (let indice = 0; indice < tamanho; indice += 1) {
+        if (!mascara[indice] || visitado[indice]) continue;
+
+        let inicio = 0;
+        let fim = 0;
+        let total = 0;
+        let minX = largura;
+        let minY = altura;
+        let maxX = 0;
+        let maxY = 0;
+
+        fila[fim++] = indice;
+        visitado[indice] = 1;
+
+        while (inicio < fim) {
+          const atual = fila[inicio++];
+          const x = atual % largura;
+          const y = Math.floor(atual / largura);
+
+          total += 1;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+
+          const vizinhos = [atual - 1, atual + 1, atual - largura, atual + largura];
+          for (const vizinho of vizinhos) {
+            if (vizinho < 0 || vizinho >= tamanho || visitado[vizinho] || !mascara[vizinho]) continue;
+            if ((atual % largura === 0 && vizinho === atual - 1) || (atual % largura === largura - 1 && vizinho === atual + 1)) continue;
+            visitado[vizinho] = 1;
+            fila[fim++] = vizinho;
+          }
+        }
+
+        const larguraBox = maxX - minX + 1;
+        const alturaBox = maxY - minY + 1;
+        const proporcao = larguraBox / Math.max(1, alturaBox);
+        if (total >= minimoPixels && proporcao >= 1.15 && larguraBox > 28 && alturaBox > 10) {
+          componentes.push({ total, minX, minY, maxX, maxY, larguraBox, alturaBox, proporcao });
+        }
+      }
+
+      return componentes
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 2)
+        .flatMap((componente, indice) => {
+          const base = expandirRecorteOCR({
+            nome: indice === 0 ? 'lacre azul detectado' : 'lacre azul detectado alternativo',
+            x: componente.minX / largura,
+            y: componente.minY / altura,
+            w: componente.larguraBox / largura,
+            h: componente.alturaBox / altura
+          }, 0.018, 0.035);
+
+          const leituraAmpla = limitarRecorteOCR({
+            nome: base.nome + ' - leitura ampla',
+            x: base.x + (base.w * 0.02),
+            y: base.y + (base.h * 0.12),
+            w: base.w * 0.72,
+            h: base.h * 0.78,
+            modo: 'digitos-claros',
+            psm: '6'
+          });
+
+          const faixaNumero = limitarRecorteOCR({
+            nome: base.nome + ' - faixa da numeracao',
+            x: base.x + (base.w * 0.02),
+            y: base.y + (base.h * 0.34),
+            w: base.w * 0.62,
+            h: base.h * 0.48,
+            modo: 'digitos-claros',
+            psm: '7'
+          });
+
+          const faixaInferior = limitarRecorteOCR({
+            nome: base.nome + ' - faixa inferior',
+            x: base.x,
+            y: base.y + (base.h * 0.45),
+            w: base.w * 0.66,
+            h: base.h * 0.42,
+            modo: 'limiar-adaptativo',
+            psm: '7'
+          });
+
+          return [
+            { ...base, modo: 'alto-contraste', psm: '6', alvoLargura: 1900, escalaMax: 4 },
+            leituraAmpla,
+            faixaNumero,
+            faixaInferior
+          ];
+        });
+    }
+
+    // Fotos reais dos lacres usam fundo azul e numeracao branca. As variantes abaixo isolam o azul,
+    // ampliam a faixa da numeracao e entregam texto escuro em fundo claro para o Tesseract.
     function criarImagemPreprocessadaOCR(imagem, recorte, modo = 'digitos-claros') {
       const area = calcularRecorteOCR(imagem, recorte);
-      const escala = Math.min(3, Math.max(1.4, 1700 / area.w));
+      const alvoLargura = recorte.alvoLargura || (area.w < 900 ? 2300 : 1850);
+      const escala = Math.min(recorte.escalaMax || 6, Math.max(1.35, alvoLargura / area.w));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(area.w * escala);
       canvas.height = Math.round(area.h * escala);
@@ -1325,13 +1497,18 @@
         const g = pixels[i + 1];
         const b = pixels[i + 2];
         const cinza = (r * 0.299) + (g * 0.587) + (b * 0.114);
+        const maximo = Math.max(r, g, b);
+        const minimo = Math.min(r, g, b);
         let valor;
 
         if (modo === 'digitos-claros') {
-          const possivelTextoBranco = cinza > 142 && r > 120 && g > 120 && b > 120;
-          valor = possivelTextoBranco ? 0 : 255;
+          const textoClaro = cinza > 132 && r > 105 && g > 105 && b > 105 && (maximo - minimo) < 115;
+          valor = textoClaro ? 0 : 255;
+        } else if (modo === 'limiar-adaptativo') {
+          const textoClaro = cinza > 118 && (maximo - minimo) < 135 && (r + g + b) > 390;
+          valor = textoClaro ? 0 : 255;
         } else if (modo === 'alto-contraste') {
-          const realcado = Math.max(0, Math.min(255, (cinza - 96) * 2.4 + 128));
+          const realcado = Math.max(0, Math.min(255, (cinza - 92) * 2.9 + 128));
           valor = 255 - realcado;
         } else {
           valor = 255 - cinza;
@@ -1349,20 +1526,66 @@
 
     async function gerarVariantesOCR(src) {
       const imagem = await carregarImagemOCR(src);
-      const recortes = [
-        { nome: 'lacre completo em alto contraste', x: 0.00, y: 0.00, w: 1.00, h: 1.00, modo: 'alto-contraste' },
-        { nome: 'faixa central da numeração', x: 0.03, y: 0.28, w: 0.78, h: 0.38, modo: 'digitos-claros' },
-        { nome: 'área esquerda da numeração', x: 0.00, y: 0.34, w: 0.74, h: 0.34, modo: 'digitos-claros' },
-        { nome: 'faixa inferior da numeração', x: 0.00, y: 0.46, w: 0.78, h: 0.34, modo: 'digitos-claros' }
+      const recortesDetectados = detectarRecortesLacreAzulOCR(imagem);
+      const recortesFallback = [
+        { nome: 'foto completa em alto contraste', x: 0.00, y: 0.00, w: 1.00, h: 1.00, modo: 'alto-contraste', psm: '6', alvoLargura: 1700, escalaMax: 1.6 },
+        { nome: 'faixa central da numeracao', x: 0.03, y: 0.26, w: 0.82, h: 0.42, modo: 'digitos-claros', psm: '7' },
+        { nome: 'area esquerda da numeracao', x: 0.00, y: 0.32, w: 0.76, h: 0.38, modo: 'digitos-claros', psm: '7' },
+        { nome: 'faixa inferior da numeracao', x: 0.00, y: 0.44, w: 0.80, h: 0.38, modo: 'limiar-adaptativo', psm: '7' }
       ];
 
-      return [
-        { nome: 'foto original', src },
-        ...recortes.map((recorte) => ({
-          nome: recorte.nome,
-          src: criarImagemPreprocessadaOCR(imagem, recorte, recorte.modo)
-        }))
-      ];
+      const variantes = [{ nome: 'foto original', src, psm: '6' }];
+      const chaves = new Set();
+
+      [...recortesDetectados, ...recortesFallback].forEach((recorte) => {
+        const normalizado = limitarRecorteOCR(recorte);
+        const chave = [normalizado.x, normalizado.y, normalizado.w, normalizado.h, normalizado.modo]
+          .map((valor) => Number.isFinite(Number(valor)) ? Number(valor).toFixed(3) : String(valor || ''))
+          .join('|');
+        if (chaves.has(chave)) return;
+        chaves.add(chave);
+        variantes.push({
+          nome: normalizado.nome,
+          psm: normalizado.psm || '7',
+          src: criarImagemPreprocessadaOCR(imagem, normalizado, normalizado.modo)
+        });
+      });
+
+      return variantes;
+    }
+
+    async function configurarWorkerOCRParaVariante(worker, psm) {
+      if (!worker?.setParameters) return;
+
+      await worker.setParameters({
+        tessedit_char_whitelist: '0123456789',
+        classify_bln_numeric_mode: '1',
+        preserve_interword_spaces: '1',
+        tessedit_pageseg_mode: String(psm || '7'),
+        user_defined_dpi: '420'
+      });
+    }
+
+    function candidatoConcorrenteOCRRelevante(principal, candidato) {
+      if (!principal || !candidato) return false;
+
+      const candidatoExpandidoPorRuido = candidato.numero.includes(principal.numero)
+        && candidato.numero !== principal.numero
+        && principal.numero.length === OCR_LACRE_TAMANHO_PREFERENCIAL
+        && principal.ocorrencias >= 2
+        && candidato.ocorrencias <= 1;
+
+      if (candidatoExpandidoPorRuido) return false;
+      return true;
+    }
+
+    function resultadoOCRConfiavel(principal, segundo) {
+      if (!principal) return false;
+      if (segundo && principal.confianca - segundo.confianca < OCR_AMBIGUITY_GAP_MIN) return false;
+      if (principal.confianca >= OCR_CONFIDENCE_MIN) return true;
+
+      const origemDetectada = principal.origens.some((origem) => /detectado|numeracao|faixa/i.test(origem));
+      return origemDetectada && principal.ocorrencias >= 2 && principal.confianca >= OCR_CONFIDENCE_MIN - 6;
     }
 
     async function identificarNumeroLacreNaFoto(src, contexto) {
@@ -1376,11 +1599,17 @@
         const variantes = await gerarVariantesOCR(src);
         const mapaCandidatos = new Map();
         const textos = [];
+        let psmAtual = '';
 
         for (const variante of variantes) {
+          if (variante.psm !== psmAtual) {
+            await configurarWorkerOCRParaVariante(worker, variante.psm);
+            psmAtual = variante.psm;
+          }
+
           const resultado = await worker.recognize(variante.src);
           const dados = resultado?.data || {};
-          textos.push({ variante: variante.nome, texto: dados.text || '', confianca: Number(dados.confidence || 0) });
+          textos.push({ variante: variante.nome, psm: variante.psm, texto: dados.text || '', confianca: Number(dados.confidence || 0) });
 
           extrairCandidatosNumeroLacre(dados, variante.nome).forEach((candidato) => {
             registrarCandidatoLacreOCR(mapaCandidatos, candidato.numero, candidato.confianca, variante.nome);
@@ -1391,18 +1620,13 @@
         const principal = candidatos[0];
 
         if (!principal) {
-          registrarFalhaOCR(contexto, 'nenhum candidato numérico encontrado', { textos });
+          registrarFalhaOCR(contexto, 'nenhum candidato numerico encontrado', { textos });
           return { identificado: false, numero: '', confianca: 0 };
         }
 
-        if (principal.confianca < OCR_CONFIDENCE_MIN) {
-          registrarFalhaOCR(contexto, 'confiança abaixo do limite', principal);
-          return { identificado: false, numero: '', confianca: principal.confianca };
-        }
-
-        const segundo = candidatos.find((candidato) => candidato.numero !== principal.numero);
-        if (segundo && principal.confianca - segundo.confianca < 12) {
-          registrarFalhaOCR(contexto, 'resultado ambíguo', { principal, segundo });
+        const segundo = candidatos.find((candidato) => candidato.numero !== principal.numero && candidatoConcorrenteOCRRelevante(principal, candidato));
+        if (!resultadoOCRConfiavel(principal, segundo)) {
+          registrarFalhaOCR(contexto, segundo ? 'resultado ambiguo ou abaixo do limite' : 'confianca abaixo do limite', { principal, segundo, textos });
           return { identificado: false, numero: '', confianca: principal.confianca };
         }
 
@@ -1412,7 +1636,7 @@
           confianca: principal.confianca
         };
       } catch (erro) {
-        registrarFalhaOCR(contexto, 'falha técnica no OCR', { erro });
+        registrarFalhaOCR(contexto, 'falha tecnica no OCR', { erro });
         return { identificado: false, numero: '', confianca: 0 };
       }
     }
