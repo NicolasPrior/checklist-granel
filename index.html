@@ -872,9 +872,10 @@
     const OCR_LACRE_NAO_IDENTIFICADO = 'Lacre não identificado';
     const OCR_CONFIDENCE_MIN = 58;
     const OCR_AMBIGUITY_GAP_MIN = 10;
-    const OCR_LACRE_TAMANHO_MIN = 6;
+    const OCR_LACRE_TAMANHO_MIN = 7;
     const OCR_LACRE_TAMANHO_PREFERENCIAL = 7;
-    const OCR_LACRE_TAMANHO_MAX = 8;
+    const OCR_LACRE_TAMANHO_MAX = 7;
+    const OCR_LACRE_PREFIXO_PADRAO = /^0{2,}/;
     let ocrScriptPromise = null;
     let ocrWorkerPromise = null;
 
@@ -1245,7 +1246,7 @@
       return Array.from(mapa.values())
         .map((candidato) => {
           const bonusComprimento = candidato.numero.length === OCR_LACRE_TAMANHO_PREFERENCIAL ? 14 : 4;
-          const bonusZeros = /^0{2,}/.test(candidato.numero) ? 8 : 0;
+          const bonusZeros = OCR_LACRE_PREFIXO_PADRAO.test(candidato.numero) ? 22 : -24;
           const bonusOcorrencias = Math.min(14, Math.max(0, candidato.ocorrencias - 1) * 5);
           const bonusPreprocessamento = Array.from(candidato.origens).some((origem) => origem !== 'foto original') ? 5 : 0;
           const confianca = Math.min(100, candidato.confiancaBase + bonusComprimento + bonusZeros + bonusOcorrencias + bonusPreprocessamento);
@@ -1425,7 +1426,7 @@
 
       return componentes
         .sort((a, b) => b.total - a.total)
-        .slice(0, 2)
+        .slice(0, 4)
         .flatMap((componente, indice) => {
           const base = expandirRecorteOCR({
             nome: indice === 0 ? 'lacre azul detectado' : 'lacre azul detectado alternativo',
@@ -1465,11 +1466,76 @@
             psm: '7'
           });
 
+          const numeroDulcini = limitarRecorteOCR({
+            nome: base.nome + ' - numero Dulcini',
+            x: base.x + (base.w * 0.035),
+            y: base.y + (base.h * 0.39),
+            w: base.w * 0.48,
+            h: base.h * 0.32,
+            modo: 'digitos-claros',
+            psm: '7',
+            alvoLargura: 2500,
+            escalaMax: 8
+          });
+
+          const numeroDulciniEstreito = limitarRecorteOCR({
+            nome: base.nome + ' - numero Dulcini estreito',
+            x: base.x + (base.w * 0.04),
+            y: base.y + (base.h * 0.46),
+            w: base.w * 0.45,
+            h: base.h * 0.24,
+            modo: 'limiar-adaptativo',
+            psm: '8',
+            alvoLargura: 2600,
+            escalaMax: 8
+          });
+
+          const numeroDulciniRealcado = limitarRecorteOCR({
+            nome: base.nome + ' - numero Dulcini realcado',
+            x: base.x + (base.w * 0.10),
+            y: base.y + (base.h * 0.37),
+            w: base.w * 0.50,
+            h: base.h * 0.34,
+            modo: 'realce-branco',
+            psm: '7',
+            alvoLargura: 2800,
+            escalaMax: 8
+          });
+
+          const numeroDulciniCentral = limitarRecorteOCR({
+            nome: base.nome + ' - numero Dulcini central',
+            x: base.x + (base.w * 0.12),
+            y: base.y + (base.h * 0.41),
+            w: base.w * 0.46,
+            h: base.h * 0.28,
+            modo: 'realce-branco',
+            psm: '8',
+            alvoLargura: 2800,
+            escalaMax: 8
+          });
+
+          const numeroDulciniLinhaBaixa = limitarRecorteOCR({
+            nome: base.nome + ' - numero Dulcini linha baixa',
+            x: base.x + (base.w * 0.08),
+            y: base.y + (base.h * 0.43),
+            w: base.w * 0.54,
+            h: base.h * 0.28,
+            modo: 'realce-branco',
+            psm: '7',
+            alvoLargura: 2900,
+            escalaMax: 8
+          });
+
           return [
             { ...base, modo: 'alto-contraste', psm: '6', alvoLargura: 1900, escalaMax: 4 },
             leituraAmpla,
             faixaNumero,
-            faixaInferior
+            faixaInferior,
+            numeroDulcini,
+            numeroDulciniEstreito,
+            numeroDulciniRealcado,
+            numeroDulciniCentral,
+            numeroDulciniLinhaBaixa
           ];
         });
     }
@@ -1507,6 +1573,12 @@
         } else if (modo === 'limiar-adaptativo') {
           const textoClaro = cinza > 118 && (maximo - minimo) < 135 && (r + g + b) > 390;
           valor = textoClaro ? 0 : 255;
+        } else if (modo === 'realce-branco') {
+          const brancoBase = Math.min(r, g, b);
+          const brancoPorCanaisQuentes = (r * 0.55) + (g * 0.45);
+          const intensidadeBranco = Math.max(brancoBase, brancoPorCanaisQuentes);
+          const realcado = Math.max(0, Math.min(255, (intensidadeBranco - 88) * 2.55));
+          valor = 255 - realcado;
         } else if (modo === 'alto-contraste') {
           const realcado = Math.max(0, Math.min(255, (cinza - 92) * 2.9 + 128));
           valor = 255 - realcado;
@@ -1531,7 +1603,9 @@
         { nome: 'foto completa em alto contraste', x: 0.00, y: 0.00, w: 1.00, h: 1.00, modo: 'alto-contraste', psm: '6', alvoLargura: 1700, escalaMax: 1.6 },
         { nome: 'faixa central da numeracao', x: 0.03, y: 0.26, w: 0.82, h: 0.42, modo: 'digitos-claros', psm: '7' },
         { nome: 'area esquerda da numeracao', x: 0.00, y: 0.32, w: 0.76, h: 0.38, modo: 'digitos-claros', psm: '7' },
-        { nome: 'faixa inferior da numeracao', x: 0.00, y: 0.44, w: 0.80, h: 0.38, modo: 'limiar-adaptativo', psm: '7' }
+        { nome: 'faixa inferior da numeracao', x: 0.00, y: 0.44, w: 0.80, h: 0.38, modo: 'limiar-adaptativo', psm: '7' },
+        { nome: 'numero padrao Dulcini realcado', x: 0.08, y: 0.33, w: 0.60, h: 0.36, modo: 'realce-branco', psm: '7', alvoLargura: 2800, escalaMax: 8 },
+        { nome: 'linha padrao Dulcini realcada', x: 0.10, y: 0.40, w: 0.56, h: 0.30, modo: 'realce-branco', psm: '8', alvoLargura: 2900, escalaMax: 8 }
       ];
 
       const variantes = [{ nome: 'foto original', src, psm: '6' }];
@@ -1579,12 +1653,30 @@
       return true;
     }
 
+    function numeroLacreSeguePadraoDulcini(numero = '') {
+      const digitos = limparNumeroLacreOCR(numero);
+      return digitos.length === OCR_LACRE_TAMANHO_PREFERENCIAL && OCR_LACRE_PREFIXO_PADRAO.test(digitos);
+    }
+
+    function origemOCRAuxiliar(origem = '') {
+      return /realcado|central|linha baixa/i.test(String(origem || ''));
+    }
+
+    function candidatoTemOrigemForte(candidato) {
+      return Boolean(candidato?.origens?.some((origem) => origem && origem !== 'foto original' && !origemOCRAuxiliar(origem)));
+    }
+
     function resultadoOCRConfiavel(principal, segundo) {
       if (!principal) return false;
-      if (segundo && principal.confianca - segundo.confianca < OCR_AMBIGUITY_GAP_MIN) return false;
+      if (!numeroLacreSeguePadraoDulcini(principal.numero)) return false;
+      if (!candidatoTemOrigemForte(principal)) return false;
+
+      const segundoValido = segundo && numeroLacreSeguePadraoDulcini(segundo.numero) ? segundo : null;
+      if (segundoValido && principal.confianca - segundoValido.confianca < OCR_AMBIGUITY_GAP_MIN) return false;
+
+      const origemDetectada = principal.origens.some((origem) => /detectado|numeracao|numero|faixa/i.test(origem));
       if (principal.confianca >= OCR_CONFIDENCE_MIN) return true;
 
-      const origemDetectada = principal.origens.some((origem) => /detectado|numeracao|faixa/i.test(origem));
       return origemDetectada && principal.ocorrencias >= 2 && principal.confianca >= OCR_CONFIDENCE_MIN - 6;
     }
 
@@ -1624,7 +1716,11 @@
           return { identificado: false, numero: '', confianca: 0 };
         }
 
-        const segundo = candidatos.find((candidato) => candidato.numero !== principal.numero && candidatoConcorrenteOCRRelevante(principal, candidato));
+        const segundo = candidatos.find((candidato) => (
+          candidato.numero !== principal.numero
+          && candidatoTemOrigemForte(candidato)
+          && candidatoConcorrenteOCRRelevante(principal, candidato)
+        ));
         if (!resultadoOCRConfiavel(principal, segundo)) {
           registrarFalhaOCR(contexto, segundo ? 'resultado ambiguo ou abaixo do limite' : 'confianca abaixo do limite', { principal, segundo, textos });
           return { identificado: false, numero: '', confianca: principal.confianca };
@@ -1712,11 +1808,114 @@
       root.querySelectorAll('.box-imagem').forEach(sincronizarCaixa);
     }
 
-    function preencherBoxImagem(box, src) {
+    function preencherBoxImagem(box, src, ocr = undefined) {
       const img = box.querySelector('img');
-      if (src) img.setAttribute('src', src);
-      else img.removeAttribute('src');
+
+      if (src) {
+        img.setAttribute('src', src);
+        if (deveExecutarOCRBox(box)) {
+          definirOCRBox(box, ocr ?? null);
+        } else {
+          limparOCRBox(box);
+        }
+      } else {
+        img.removeAttribute('src');
+        limparOCRBox(box);
+      }
+
       sincronizarCaixa(box);
+    }
+
+    function deveExecutarOCRBox(box) {
+      if (!box) return false;
+      if (box.dataset.fotoTipo) return box.dataset.fotoTipo === 'lacre';
+      return Boolean(box.closest('.lacre-box'));
+    }
+
+    function normalizarResultadoOCRBox(ocr = null) {
+      return {
+        identificado: Boolean(ocr?.identificado && ocr?.numero),
+        numero: ocr?.numero ? limparNumeroLacreOCR(ocr.numero) : '',
+        confianca: Number(ocr?.confianca || 0)
+      };
+    }
+
+    function definirOCRBox(box, ocr = null) {
+      if (!box) return;
+      const resultado = normalizarResultadoOCRBox(ocr);
+      box.dataset.ocrStatus = 'done';
+      box.dataset.ocrIdentificado = resultado.identificado ? '1' : '0';
+      box.dataset.ocrNumero = resultado.numero;
+      box.dataset.ocrConfianca = String(Math.round(resultado.confianca));
+      atualizarTextoOCRBox(box);
+    }
+
+    function limparOCRBox(box) {
+      if (!box) return;
+      delete box.dataset.ocrStatus;
+      delete box.dataset.ocrIdentificado;
+      delete box.dataset.ocrNumero;
+      delete box.dataset.ocrConfianca;
+      atualizarTextoOCRBox(box);
+    }
+
+    function obterOCRBox(box) {
+      if (!box || box.dataset.ocrStatus !== 'done') return null;
+      return {
+        identificado: box.dataset.ocrIdentificado === '1' && Boolean(box.dataset.ocrNumero),
+        numero: box.dataset.ocrNumero || '',
+        confianca: Number(box.dataset.ocrConfianca || 0)
+      };
+    }
+
+    function obterRegistroFotoBox(box) {
+      return {
+        src: obterSrcBox(box),
+        ocr: obterOCRBox(box)
+      };
+    }
+
+    function atualizarTextoOCRBox(box) {
+      if (!box || !deveExecutarOCRBox(box)) return;
+      const dica = box.closest('.foto-col')?.querySelector('.foto-dica')
+        || box.closest('.registro-card')?.querySelector('.foto-dica');
+      if (!dica) return;
+
+      if (!dica.dataset.textoPadrao) {
+        dica.dataset.textoPadrao = dica.innerText || 'Camera ou galeria';
+      }
+
+      if (!obterSrcBox(box)) {
+        dica.innerText = dica.dataset.textoPadrao;
+        return;
+      }
+
+      if (box.dataset.ocrStatus === 'processing') {
+        dica.innerText = 'Lendo número do lacre...';
+        return;
+      }
+
+      dica.innerText = formatarResultadoOCR(obterOCRBox(box));
+    }
+
+    async function executarOCRUploadBox(box, src, contexto = 'Upload de lacre') {
+      if (!box || !src || !deveExecutarOCRBox(box)) return null;
+
+      box.dataset.ocrStatus = 'processing';
+      atualizarTextoOCRBox(box);
+
+      try {
+        const resultado = await identificarNumeroLacreNaFoto(src, contexto);
+        definirOCRBox(box, resultado);
+        return resultado;
+      } catch (erro) {
+        registrarFalhaOCR(contexto, 'falha tecnica no OCR do upload', { erro });
+        const resultado = { identificado: false, numero: '', confianca: 0 };
+        definirOCRBox(box, resultado);
+        return resultado;
+      } finally {
+        await encerrarWorkerOCR();
+      }
     }
 
     async function comprimirImagem(file) {
@@ -1767,11 +1966,13 @@
 
       try {
         const imagemCompacta = await comprimirImagem(input.files[0]);
-        preencherBoxImagem(box, imagemCompacta);
+        preencherBoxImagem(box, imagemCompacta, null);
+        await executarOCRUploadBox(box, imagemCompacta, 'Granel - upload do lacre');
       } catch {
         preencherBoxImagem(box, '');
-        alert('Não foi possível processar essa foto.');
+        alert('Nao foi possivel processar essa foto.');
       } finally {
+        input.value = '';
         const resetMsg = box.querySelector('.msg-camera strong');
         if (resetMsg && !obterSrcBox(box)) resetMsg.innerText = 'Registrar foto';
       }
@@ -1802,11 +2003,15 @@
     }
 
     function coletarLacres() {
-      return Array.from(document.querySelectorAll('#container-lacres .lacre-box')).map((lacreBox, index) => ({
-        numero: index + 1,
-        local: lacreBox.querySelector('.lacre-local-select')?.value || '',
-        foto: obterSrcBox(lacreBox.querySelector('.box-imagem'))
-      }));
+      return Array.from(document.querySelectorAll('#container-lacres .lacre-box')).map((lacreBox, index) => {
+        const boxImagem = lacreBox.querySelector('.box-imagem');
+        return {
+          numero: index + 1,
+          local: lacreBox.querySelector('.lacre-local-select')?.value || '',
+          foto: obterSrcBox(boxImagem),
+          ocr: obterOCRBox(boxImagem)
+        };
+      });
     }
 
     function addLacre(lacreData = null) {
@@ -1850,7 +2055,7 @@
       const novoLacre = container.lastElementChild;
 
       if (lacreData && lacreData.foto) {
-        preencherBoxImagem(novoLacre.querySelector('.box-imagem'), lacreData.foto);
+        preencherBoxImagem(novoLacre.querySelector('.box-imagem'), lacreData.foto, lacreData.ocr || null);
       }
 
       document.getElementById('painel-lacres').style.display = 'block';
@@ -2013,19 +2218,7 @@
     }
 
     async function obterDadosPDFComOCR() {
-      const dados = obterDadosPDF();
-      const lacres = [];
-
-      for (let i = 0; i < dados.lacres.length; i++) {
-        const lacre = dados.lacres[i];
-        atualizarStatusLoading('Lendo número do lacre ' + (i + 1) + ' de ' + dados.lacres.length + '...');
-        lacres.push({
-          ...lacre,
-          ocr: await identificarNumeroLacreNaFoto(lacre.foto, 'Granel - lacre ' + lacre.numero)
-        });
-      }
-
-      return { ...dados, lacres };
+      return obterDadosPDF();
     }
 
     function montarMetaCard(titulo, valor) {
@@ -2407,11 +2600,9 @@
           alert('Ainda faltam fotos obrigatórias:\n\n' + faltantes.join('\n'));
           return;
         }
+        const dadosPDF = obterDadosPDF();
 
-        atualizarStatusLoading('Lendo os números dos lacres nas fotos...');
-        const dadosPDF = await obterDadosPDFComOCR();
-
-        atualizarStatusLoading('Montando as páginas do checklist...');
+        atualizarStatusLoading('Montando as p?ginas do checklist...');
         const root = construirPaginasPDF(dadosPDF);
 
         await esperar(300);
