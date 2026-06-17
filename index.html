@@ -1856,6 +1856,7 @@
       delete box.dataset.ocrIdentificado;
       delete box.dataset.ocrNumero;
       delete box.dataset.ocrConfianca;
+      delete box.dataset.ocrNomeImagem;
       atualizarTextoOCRBox(box);
     }
 
@@ -1890,7 +1891,7 @@
         return;
       }
 
-      if (box.dataset.ocrStatus === 'processing') {
+      if (box.dataset.ocrStatus === 'processing' || box.dataset.ocrStatus === 'queued') {
         dica.innerText = 'Lendo número do lacre...';
         return;
       }
@@ -1898,24 +1899,97 @@
       dica.innerText = formatarResultadoOCR(obterOCRBox(box));
     }
 
-    async function executarOCRUploadBox(box, src, contexto = 'Upload de lacre') {
+    let filaOCRUpload = Promise.resolve();
+    const pendenciasOCRUpload = new Set();
+
+    function registrarDiagnosticoOCR(etapa, dados = {}) {
+      console.info('[Diagnostico OCR Lacre]', {
+        etapa,
+        horario: new Date().toISOString(),
+        ...dados
+      });
+    }
+
+    function registrarPendenciaOCR(promessa) {
+      pendenciasOCRUpload.add(promessa);
+      promessa.finally(() => pendenciasOCRUpload.delete(promessa));
+      return promessa;
+    }
+
+    async function aguardarOCRUploadsPendentes() {
+      while (pendenciasOCRUpload.size) {
+        atualizarStatusLoading('Concluindo a leitura dos lacres...');
+        await Promise.allSettled(Array.from(pendenciasOCRUpload));
+      }
+    }
+
+    function resumirOCRParaDiagnostico() {
+      return Array.from(document.querySelectorAll('.box-imagem'))
+        .filter((box) => deveExecutarOCRBox(box) && obterSrcBox(box))
+        .map((box, index) => ({
+          indice: index + 1,
+          nomeImagem: box.dataset.ocrNomeImagem || '',
+          status: box.dataset.ocrStatus || 'sem status',
+          valorSalvo: obterOCRBox(box)
+        }));
+    }
+
+    async function executarOCRUploadBox(box, src, contexto = 'Upload de lacre', nomeImagem = '') {
       if (!box || !src || !deveExecutarOCRBox(box)) return null;
 
-      box.dataset.ocrStatus = 'processing';
+      box.dataset.ocrStatus = 'queued';
+      box.dataset.ocrNomeImagem = nomeImagem || '';
       atualizarTextoOCRBox(box);
 
-      try {
-        const resultado = await identificarNumeroLacreNaFoto(src, contexto);
-        definirOCRBox(box, resultado);
-        return resultado;
-      } catch (erro) {
-        registrarFalhaOCR(contexto, 'falha tecnica no OCR do upload', { erro });
-        const resultado = { identificado: false, numero: '', confianca: 0 };
-        definirOCRBox(box, resultado);
-        return resultado;
-      } finally {
-        await encerrarWorkerOCR();
-      }
+      const tarefa = async () => {
+        if (obterSrcBox(box) !== src) {
+          registrarDiagnosticoOCR('upload-ignorado-foto-substituida', { contexto, nomeImagem });
+          return null;
+        }
+
+        box.dataset.ocrStatus = 'processing';
+        atualizarTextoOCRBox(box);
+        registrarDiagnosticoOCR('upload-inicio', { contexto, nomeImagem });
+
+        try {
+          const resultado = await identificarNumeroLacreNaFoto(src, contexto);
+
+          if (obterSrcBox(box) !== src) {
+            registrarDiagnosticoOCR('resultado-descartado-foto-substituida', {
+              contexto,
+              nomeImagem,
+              resultadoBruto: resultado
+            });
+            return resultado;
+          }
+
+          definirOCRBox(box, resultado);
+          registrarDiagnosticoOCR('upload-resultado-salvo', {
+            contexto,
+            nomeImagem,
+            resultadoBruto: resultado,
+            valorSalvo: obterOCRBox(box)
+          });
+          return resultado;
+        } catch (erro) {
+          registrarFalhaOCR(contexto, 'falha tecnica no OCR do upload', { erro });
+          const resultado = { identificado: false, numero: '', confianca: 0 };
+          definirOCRBox(box, resultado);
+          registrarDiagnosticoOCR('upload-falha-salva', {
+            contexto,
+            nomeImagem,
+            erro: erro?.message || String(erro),
+            valorSalvo: obterOCRBox(box)
+          });
+          return resultado;
+        } finally {
+          await encerrarWorkerOCR();
+        }
+      };
+
+      const promessa = filaOCRUpload.catch(() => {}).then(tarefa);
+      filaOCRUpload = promessa.catch(() => {});
+      return registrarPendenciaOCR(promessa);
     }
 
     async function comprimirImagem(file) {
@@ -1960,17 +2034,18 @@
     async function preview(input) {
       if (!input.files || !input.files[0]) return;
 
+      const arquivo = input.files[0];
       const box = input.closest('.box-imagem');
       const msg = box.querySelector('.msg-camera strong');
       if (msg) msg.innerText = 'Processando...';
 
       try {
-        const imagemCompacta = await comprimirImagem(input.files[0]);
+        const imagemCompacta = await comprimirImagem(arquivo);
         preencherBoxImagem(box, imagemCompacta, null);
-        await executarOCRUploadBox(box, imagemCompacta, 'Granel - upload do lacre');
+        await executarOCRUploadBox(box, imagemCompacta, 'Granel - upload do lacre', arquivo.name || '');
       } catch {
         preencherBoxImagem(box, '');
-        alert('Nao foi possivel processar essa foto.');
+        alert('Não foi possível processar essa foto.');
       } finally {
         input.value = '';
         const resetMsg = box.querySelector('.msg-camera strong');
@@ -2421,6 +2496,7 @@
         return;
       }
 
+      await aguardarOCRUploadsPendentes();
       const snapshot = coletarEstadoAtual();
 
       if (!snapshot.campos.p || !snapshot.campos.colaborador) {
@@ -2600,9 +2676,11 @@
           alert('Ainda faltam fotos obrigatórias:\n\n' + faltantes.join('\n'));
           return;
         }
+        await aguardarOCRUploadsPendentes();
         const dadosPDF = obterDadosPDF();
+        registrarDiagnosticoOCR('pdf-dados-enviados', { contexto: 'Granel', lacres: resumirOCRParaDiagnostico() });
 
-        atualizarStatusLoading('Montando as p?ginas do checklist...');
+        atualizarStatusLoading('Montando as páginas do checklist...');
         const root = construirPaginasPDF(dadosPDF);
 
         await esperar(300);
