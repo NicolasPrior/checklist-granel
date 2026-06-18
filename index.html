@@ -846,8 +846,10 @@
     const STORAGE_KEY = 'dulcini_checklists_granel_pendentes';
     const LEGACY_STORAGE_KEYS = [STORAGE_KEY, 'checklists_granel_pendentes'];
     const DB_NAME = 'dulcini_checklists_granel_db';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     const STORE_NAME = 'pendentes';
+    const RASCUNHO_STORE = 'rascunho-ativo';
+    const RASCUNHO_KEY = 'atual';
 
     const LOGO_DATA_URL = 'data:image/jpeg;base64,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';
     const WATERMARK_LOGO_DATA_URL = 'data:image/jpeg;base64,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';
@@ -871,6 +873,8 @@
     const OCR_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
     const OCR_LACRE_NAO_IDENTIFICADO = 'Lacre não identificado';
     const OCR_CONFIDENCE_MIN = 58;
+    const OCR_CONFIDENCE_ALTA = 90;
+    const OCR_OCORRENCIAS_MIN = 2;
     const OCR_AMBIGUITY_GAP_MIN = 10;
     const OCR_LACRE_TAMANHO_MIN = 7;
     const OCR_LACRE_TAMANHO_PREFERENCIAL = 7;
@@ -889,6 +893,9 @@
           const db = event.target.result;
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains(RASCUNHO_STORE)) {
+            db.createObjectStore(RASCUNHO_STORE);
           }
         };
 
@@ -928,6 +935,59 @@
         request.onsuccess = () => resolve(item);
         request.onerror = () => reject(request.error || new Error('Erro ao salvar pendente.'));
       });
+    }
+
+    // Rascunho do checklist em andamento: persistido continuamente para sobreviver a refresh/fechamento.
+    async function salvarRascunhoDB(snapshot) {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(RASCUNHO_STORE, 'readwrite');
+        tx.objectStore(RASCUNHO_STORE).put(snapshot, RASCUNHO_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('Erro ao salvar rascunho.'));
+      });
+    }
+
+    async function lerRascunhoDB() {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(RASCUNHO_STORE, 'readonly');
+        const req = tx.objectStore(RASCUNHO_STORE).get(RASCUNHO_KEY);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error || new Error('Erro ao ler rascunho.'));
+      });
+    }
+
+    async function limparRascunhoDB() {
+      try {
+        const db = await abrirBanco();
+        await new Promise((resolve) => {
+          const tx = db.transaction(RASCUNHO_STORE, 'readwrite');
+          tx.objectStore(RASCUNHO_STORE).delete(RASCUNHO_KEY);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        });
+      } catch (erro) {
+        console.warn('Falha ao limpar rascunho:', erro);
+      }
+    }
+
+    let autoSaveTimer = null;
+    let autoSaveAtivo = false;
+    function agendarAutoSave() {
+      if (!autoSaveAtivo) return;
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        try {
+          const snapshot = coletarEstadoAtual();
+          const temConteudo = snapshot.lacres.length
+            || Object.values(snapshot.campos || {}).some((v) => String(v || '').trim());
+          if (temConteudo) salvarRascunhoDB(snapshot).catch((e) => console.warn('Auto-save falhou:', e));
+          else limparRascunhoDB();
+        } catch (erro) {
+          console.warn('Auto-save falhou:', erro);
+        }
+      }, 700);
     }
 
     async function excluirPendenteDB(id) {
@@ -1246,7 +1306,7 @@
       return Array.from(mapa.values())
         .map((candidato) => {
           const bonusComprimento = candidato.numero.length === OCR_LACRE_TAMANHO_PREFERENCIAL ? 14 : 4;
-          const bonusZeros = OCR_LACRE_PREFIXO_PADRAO.test(candidato.numero) ? 22 : -24;
+          const bonusZeros = OCR_LACRE_PREFIXO_PADRAO.test(candidato.numero) ? 12 : 0;
           const bonusOcorrencias = Math.min(14, Math.max(0, candidato.ocorrencias - 1) * 5);
           const bonusPreprocessamento = Array.from(candidato.origens).some((origem) => origem !== 'foto original') ? 5 : 0;
           const confianca = Math.min(100, candidato.confiancaBase + bonusComprimento + bonusZeros + bonusOcorrencias + bonusPreprocessamento);
@@ -1273,8 +1333,9 @@
 
         if (numero.length > OCR_LACRE_TAMANHO_MAX) {
           const padraoComZeros = new RegExp('0{2,}\\d{' + (OCR_LACRE_TAMANHO_MIN - 2) + ',' + (OCR_LACRE_TAMANHO_MAX - 2) + '}', 'g');
-          const candidatosComZeros = numero.match(padraoComZeros) || [];
-          candidatosComZeros.forEach((candidato) => registrarCandidatoLacreOCR(mapa, candidato, calcularConfiancaOCR(dados, candidato), origem));
+          const padraoGenerico = new RegExp('\\d{' + OCR_LACRE_TAMANHO_PREFERENCIAL + '}', 'g');
+          const candidatos = numero.match(padraoComZeros) || numero.match(padraoGenerico) || [];
+          candidatos.forEach((candidato) => registrarCandidatoLacreOCR(mapa, candidato, calcularConfiancaOCR(dados, candidato), origem));
           return;
         }
 
@@ -1540,56 +1601,73 @@
         });
     }
 
-    // Fotos reais dos lacres usam fundo azul e numeracao branca. As variantes abaixo isolam o azul,
-    // ampliam a faixa da numeracao e entregam texto escuro em fundo claro para o Tesseract.
+    // Os lacres Dulcini tem numeracao CLARA em BAIXO-RELEVO sobre fundo azul: o numero e apenas
+    // um pouco mais claro que o fundo, com baixo contraste e iluminacao irregular. Limiar global
+    // (a abordagem antiga de "texto branco") apaga os digitos. Aqui usamos LIMIAR ADAPTATIVO LOCAL
+    // (imagem integral) para isolar pixels mais claros que a propria vizinhanca, corrigindo a
+    // iluminacao irregular e entregando texto preto em fundo branco para o Tesseract. O `modo` so
+    // ajusta o offset, criando variacoes uteis para a votacao entre variantes.
+    function offsetLimiarOCR(modo) {
+      if (modo === 'limiar-adaptativo') return 2;
+      if (modo === 'realce-branco') return 12;
+      if (modo === 'alto-contraste') return -2;
+      return 7; // digitos-claros / padrao
+    }
+
     function criarImagemPreprocessadaOCR(imagem, recorte, modo = 'digitos-claros') {
       const area = calcularRecorteOCR(imagem, recorte);
       const alvoLargura = recorte.alvoLargura || (area.w < 900 ? 2300 : 1850);
       const escala = Math.min(recorte.escalaMax || 6, Math.max(1.35, alvoLargura / area.w));
       const canvas = document.createElement('canvas');
-      canvas.width = Math.round(area.w * escala);
-      canvas.height = Math.round(area.h * escala);
+      const largura = canvas.width = Math.round(area.w * escala);
+      const altura = canvas.height = Math.round(area.h * escala);
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(imagem, area.x, area.y, area.w, area.h, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(imagem, area.x, area.y, area.w, area.h, 0, 0, largura, altura);
 
-      const imagemData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const imagemData = ctx.getImageData(0, 0, largura, altura);
       const pixels = imagemData.data;
+      const total = largura * altura;
 
-      for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-        const cinza = (r * 0.299) + (g * 0.587) + (b * 0.114);
-        const maximo = Math.max(r, g, b);
-        const minimo = Math.min(r, g, b);
-        let valor;
+      const cinza = new Float32Array(total);
+      for (let i = 0, p = 0; i < pixels.length; i += 4, p += 1) {
+        cinza[p] = (pixels[i] * 0.299) + (pixels[i + 1] * 0.587) + (pixels[i + 2] * 0.114);
+      }
 
-        if (modo === 'digitos-claros') {
-          const textoClaro = cinza > 132 && r > 105 && g > 105 && b > 105 && (maximo - minimo) < 115;
-          valor = textoClaro ? 0 : 255;
-        } else if (modo === 'limiar-adaptativo') {
-          const textoClaro = cinza > 118 && (maximo - minimo) < 135 && (r + g + b) > 390;
-          valor = textoClaro ? 0 : 255;
-        } else if (modo === 'realce-branco') {
-          const brancoBase = Math.min(r, g, b);
-          const brancoPorCanaisQuentes = (r * 0.55) + (g * 0.45);
-          const intensidadeBranco = Math.max(brancoBase, brancoPorCanaisQuentes);
-          const realcado = Math.max(0, Math.min(255, (intensidadeBranco - 88) * 2.55));
-          valor = 255 - realcado;
-        } else if (modo === 'alto-contraste') {
-          const realcado = Math.max(0, Math.min(255, (cinza - 92) * 2.9 + 128));
-          valor = 255 - realcado;
-        } else {
-          valor = 255 - cinza;
+      // Imagem integral (soma de prefixos) para media local em O(1) por pixel.
+      const larguraI = largura + 1;
+      const integral = new Float64Array(larguraI * (altura + 1));
+      for (let y = 0; y < altura; y += 1) {
+        let somaLinha = 0;
+        for (let x = 0; x < largura; x += 1) {
+          somaLinha += cinza[y * largura + x];
+          integral[(y + 1) * larguraI + (x + 1)] = integral[y * larguraI + (x + 1)] + somaLinha;
         }
+      }
 
-        pixels[i] = valor;
-        pixels[i + 1] = valor;
-        pixels[i + 2] = valor;
-        pixels[i + 3] = 255;
+      const raio = Math.max(10, Math.round(altura * 0.18));
+      const offset = offsetLimiarOCR(modo);
+
+      for (let y = 0; y < altura; y += 1) {
+        const y0 = Math.max(0, y - raio);
+        const y1 = Math.min(altura - 1, y + raio);
+        for (let x = 0; x < largura; x += 1) {
+          const x0 = Math.max(0, x - raio);
+          const x1 = Math.min(largura - 1, x + raio);
+          const areaJanela = (x1 - x0 + 1) * (y1 - y0 + 1);
+          const soma = integral[(y1 + 1) * larguraI + (x1 + 1)]
+            - integral[y0 * larguraI + (x1 + 1)]
+            - integral[(y1 + 1) * larguraI + x0]
+            + integral[y0 * larguraI + x0];
+          const media = soma / areaJanela;
+          // Texto claro: pixel mais brilhante que a vizinhanca vira tinta preta (0).
+          const valor = cinza[y * largura + x] > media + offset ? 0 : 255;
+          const idx = (y * largura + x) * 4;
+          pixels[idx] = pixels[idx + 1] = pixels[idx + 2] = valor;
+          pixels[idx + 3] = 255;
+        }
       }
 
       ctx.putImageData(imagemData, 0, 0);
@@ -1600,12 +1678,12 @@
       const imagem = await carregarImagemOCR(src);
       const recortesDetectados = detectarRecortesLacreAzulOCR(imagem);
       const recortesFallback = [
-        { nome: 'foto completa em alto contraste', x: 0.00, y: 0.00, w: 1.00, h: 1.00, modo: 'alto-contraste', psm: '6', alvoLargura: 1700, escalaMax: 1.6 },
+        { nome: 'foto completa numeracao esparsa', x: 0.00, y: 0.00, w: 1.00, h: 1.00, modo: 'digitos-claros', psm: '11', alvoLargura: 2000, escalaMax: 2.6 },
+        { nome: 'foto completa numeracao bloco', x: 0.00, y: 0.00, w: 1.00, h: 1.00, modo: 'limiar-adaptativo', psm: '6', alvoLargura: 2000, escalaMax: 2.6 },
+        { nome: 'metade inferior numeracao esparsa', x: 0.00, y: 0.30, w: 1.00, h: 0.70, modo: 'digitos-claros', psm: '11', alvoLargura: 2200, escalaMax: 4 },
         { nome: 'faixa central da numeracao', x: 0.03, y: 0.26, w: 0.82, h: 0.42, modo: 'digitos-claros', psm: '7' },
-        { nome: 'area esquerda da numeracao', x: 0.00, y: 0.32, w: 0.76, h: 0.38, modo: 'digitos-claros', psm: '7' },
-        { nome: 'faixa inferior da numeracao', x: 0.00, y: 0.44, w: 0.80, h: 0.38, modo: 'limiar-adaptativo', psm: '7' },
-        { nome: 'numero padrao Dulcini realcado', x: 0.08, y: 0.33, w: 0.60, h: 0.36, modo: 'realce-branco', psm: '7', alvoLargura: 2800, escalaMax: 8 },
-        { nome: 'linha padrao Dulcini realcada', x: 0.10, y: 0.40, w: 0.56, h: 0.30, modo: 'realce-branco', psm: '8', alvoLargura: 2900, escalaMax: 8 }
+        { nome: 'area esquerda da numeracao', x: 0.00, y: 0.32, w: 0.76, h: 0.38, modo: 'limiar-adaptativo', psm: '7' },
+        { nome: 'faixa inferior da numeracao', x: 0.00, y: 0.44, w: 0.80, h: 0.38, modo: 'realce-branco', psm: '7' }
       ];
 
       const variantes = [{ nome: 'foto original', src, psm: '6' }];
@@ -1655,7 +1733,9 @@
 
     function numeroLacreSeguePadraoDulcini(numero = '') {
       const digitos = limparNumeroLacreOCR(numero);
-      return digitos.length === OCR_LACRE_TAMANHO_PREFERENCIAL && OCR_LACRE_PREFIXO_PADRAO.test(digitos);
+      // Lacres Dulcini tem 7 digitos. O prefixo "00" e comum, mas NAO obrigatorio (existem
+      // lacres sem zeros a esquerda), entao ele entra como reforco de ranqueamento, nao como regra.
+      return digitos.length === OCR_LACRE_TAMANHO_PREFERENCIAL;
     }
 
     function origemOCRAuxiliar(origem = '') {
@@ -1669,15 +1749,17 @@
     function resultadoOCRConfiavel(principal, segundo) {
       if (!principal) return false;
       if (!numeroLacreSeguePadraoDulcini(principal.numero)) return false;
-      if (!candidatoTemOrigemForte(principal)) return false;
 
+      // Ambiguidade: dois numeros validos diferentes com confianca proxima -> nao preenche
+      // automaticamente (vai para confirmacao manual). Evita gravar o numero errado.
       const segundoValido = segundo && numeroLacreSeguePadraoDulcini(segundo.numero) ? segundo : null;
-      if (segundoValido && principal.confianca - segundoValido.confianca < OCR_AMBIGUITY_GAP_MIN) return false;
+      if (segundoValido && (principal.confianca - segundoValido.confianca) < OCR_AMBIGUITY_GAP_MIN) return false;
 
-      const origemDetectada = principal.origens.some((origem) => /detectado|numeracao|numero|faixa/i.test(origem));
-      if (principal.confianca >= OCR_CONFIDENCE_MIN) return true;
-
-      return origemDetectada && principal.ocorrencias >= 2 && principal.confianca >= OCR_CONFIDENCE_MIN - 6;
+      // Auto-preenche apenas com sinal MUITO forte de acerto: confianca alta E consenso entre
+      // variantes independentes E sem ambiguidade. Em baixa resolucao, leituras de confianca
+      // media podem estar erradas (ex.: "8" lido como "9"); essas vao para confirmacao manual,
+      // nunca preenchem automaticamente. A origem e o prefixo "00" sao reforcos, nunca vetos.
+      return principal.confianca >= OCR_CONFIDENCE_ALTA && principal.ocorrencias >= OCR_OCORRENCIAS_MIN;
     }
 
     async function identificarNumeroLacreNaFoto(src, contexto) {
@@ -1718,7 +1800,7 @@
 
         const segundo = candidatos.find((candidato) => (
           candidato.numero !== principal.numero
-          && candidatoTemOrigemForte(candidato)
+          && numeroLacreSeguePadraoDulcini(candidato.numero)
           && candidatoConcorrenteOCRRelevante(principal, candidato)
         ));
         if (!resultadoOCRConfiavel(principal, segundo)) {
@@ -1848,6 +1930,7 @@
       box.dataset.ocrNumero = resultado.numero;
       box.dataset.ocrConfianca = String(Math.round(resultado.confianca));
       atualizarTextoOCRBox(box);
+      agendarAutoSave();
     }
 
     function limparOCRBox(box) {
@@ -1876,27 +1959,83 @@
       };
     }
 
+    function definirStatusLacre(status, texto, cor) {
+      if (!status) return;
+      status.textContent = texto;
+      status.style.color = cor;
+    }
+
     function atualizarTextoOCRBox(box) {
       if (!box || !deveExecutarOCRBox(box)) return;
+      const lacreBox = box.closest('.lacre-box');
       const dica = box.closest('.foto-col')?.querySelector('.foto-dica')
         || box.closest('.registro-card')?.querySelector('.foto-dica');
-      if (!dica) return;
+      const status = lacreBox?.querySelector('.lacre-ocr-status');
+      const input = lacreBox?.querySelector('.lacre-numero-input');
+      const botao = lacreBox?.querySelector('.btn-reprocessar');
+      const temFoto = Boolean(obterSrcBox(box));
 
-      if (!dica.dataset.textoPadrao) {
-        dica.dataset.textoPadrao = dica.innerText || 'Camera ou galeria';
+      if (dica && !dica.dataset.textoPadrao) {
+        dica.dataset.textoPadrao = dica.innerText || 'Câmera do celular';
       }
+      if (botao) botao.style.display = temFoto ? 'inline-flex' : 'none';
 
-      if (!obterSrcBox(box)) {
-        dica.innerText = dica.dataset.textoPadrao;
+      if (!temFoto) {
+        if (dica) dica.innerText = dica.dataset.textoPadrao;
+        definirStatusLacre(status, 'Registre a foto para a leitura automática do número.', '#65756E');
         return;
       }
 
-      if (box.dataset.ocrStatus === 'processing' || box.dataset.ocrStatus === 'queued') {
-        dica.innerText = 'Lendo número do lacre...';
+      const estado = box.dataset.ocrStatus;
+      if (estado === 'processing' || estado === 'queued') {
+        if (dica) dica.innerText = 'Lendo número do lacre...';
+        definirStatusLacre(status, 'Lendo número do lacre...', '#65756E');
         return;
       }
 
-      dica.innerText = formatarResultadoOCR(obterOCRBox(box));
+      const ocr = obterOCRBox(box);
+      if (dica) dica.innerText = formatarResultadoOCR(ocr);
+
+      // So preenche o campo automaticamente em leitura CONFIAVEL e se o operador ainda nao digitou.
+      if (ocr?.identificado && ocr.numero && input && input.dataset.manual !== '1'
+        && (!input.value || input.dataset.auto === '1')) {
+        input.value = ocr.numero;
+        input.dataset.auto = '1';
+      }
+
+      if (input && input.dataset.manual === '1') {
+        definirStatusLacre(status, 'Número informado manualmente.', '#0a7d33');
+      } else if (ocr?.identificado && ocr.numero) {
+        definirStatusLacre(status, 'Lido automaticamente: ' + ocr.numero + ' — confira com a foto.', '#0a7d33');
+      } else {
+        definirStatusLacre(status, 'Não foi possível ler com segurança. Digite o número do lacre conferindo na foto.', '#b25a00');
+      }
+    }
+
+    function onNumeroLacreInput(input) {
+      const valor = String(input.value || '').replace(/\D+/g, '').slice(0, 7);
+      if (input.value !== valor) input.value = valor;
+      input.dataset.manual = '1';
+      delete input.dataset.auto;
+      const status = input.closest('.lacre-numero-wrap')?.querySelector('.lacre-ocr-status');
+      definirStatusLacre(status, valor ? 'Número informado manualmente.' : 'Digite o número do lacre (7 dígitos).', valor ? '#0a7d33' : '#65756E');
+      agendarAutoSave();
+    }
+
+    async function reprocessarLacre(botao) {
+      const lacreBox = botao.closest('.lacre-box');
+      const box = lacreBox?.querySelector('.box-imagem');
+      const src = box ? obterSrcBox(box) : '';
+      if (!src) {
+        alert('Registre a foto do lacre antes de reprocessar a leitura.');
+        return;
+      }
+      const input = lacreBox.querySelector('.lacre-numero-input');
+      if (input) {
+        delete input.dataset.auto;
+        delete input.dataset.manual;
+      }
+      await executarOCRUploadBox(box, src, 'Granel - reprocessar lacre', box.dataset.ocrNomeImagem || '');
     }
 
     let filaOCRUpload = Promise.resolve();
@@ -1934,8 +2073,12 @@
         }));
     }
 
-    async function executarOCRUploadBox(box, src, contexto = 'Upload de lacre', nomeImagem = '') {
+    async function executarOCRUploadBox(box, src, contexto = 'Upload de lacre', nomeImagem = '', srcOCR = null) {
       if (!box || !src || !deveExecutarOCRBox(box)) return null;
+
+      // O OCR roda numa versao SEM PERDAS (PNG) da foto; o JPEG comprimido fica so para
+      // armazenamento/PDF. Artefatos de JPEG degradam os digitos de baixo contraste do lacre.
+      const fonteOCR = srcOCR || src;
 
       box.dataset.ocrStatus = 'queued';
       box.dataset.ocrNomeImagem = nomeImagem || '';
@@ -1952,7 +2095,7 @@
         registrarDiagnosticoOCR('upload-inicio', { contexto, nomeImagem });
 
         try {
-          const resultado = await identificarNumeroLacreNaFoto(src, contexto);
+          const resultado = await identificarNumeroLacreNaFoto(fonteOCR, contexto);
 
           if (obterSrcBox(box) !== src) {
             registrarDiagnosticoOCR('resultado-descartado-foto-substituida', {
@@ -1982,9 +2125,9 @@
             valorSalvo: obterOCRBox(box)
           });
           return resultado;
-        } finally {
-          await encerrarWorkerOCR();
         }
+        // O worker do OCR e mantido vivo entre as fotos (so e encerrado ao gerar o PDF ou sair
+        // da pagina): recria-lo a cada foto deixava o upload lento e instavel.
       };
 
       const promessa = filaOCRUpload.catch(() => {}).then(tarefa);
@@ -2031,6 +2174,32 @@
       });
     }
 
+    // Versao SEM PERDAS (PNG) para o OCR, redimensionada para um tamanho util sem artefatos.
+    function prepararImagemOCR(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (evento) => {
+          const img = new Image();
+          img.onload = () => {
+            const maxLado = 2400;
+            const escala = Math.min(1, maxLado / Math.max(img.width, img.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(img.width * escala));
+            canvas.height = Math.max(1, Math.round(img.height * escala));
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/png'));
+          };
+          img.onerror = reject;
+          img.src = evento.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     async function preview(input) {
       if (!input.files || !input.files[0]) return;
 
@@ -2042,7 +2211,8 @@
       try {
         const imagemCompacta = await comprimirImagem(arquivo);
         preencherBoxImagem(box, imagemCompacta, null);
-        await executarOCRUploadBox(box, imagemCompacta, 'Granel - upload do lacre', arquivo.name || '');
+        const imagemOCR = await prepararImagemOCR(arquivo).catch(() => imagemCompacta);
+        await executarOCRUploadBox(box, imagemCompacta, 'Granel - upload do lacre', arquivo.name || '', imagemOCR);
       } catch {
         preencherBoxImagem(box, '');
         alert('Não foi possível processar essa foto.');
@@ -2050,6 +2220,7 @@
         input.value = '';
         const resetMsg = box.querySelector('.msg-camera strong');
         if (resetMsg && !obterSrcBox(box)) resetMsg.innerText = 'Registrar foto';
+        agendarAutoSave();
       }
     }
 
@@ -2080,11 +2251,15 @@
     function coletarLacres() {
       return Array.from(document.querySelectorAll('#container-lacres .lacre-box')).map((lacreBox, index) => {
         const boxImagem = lacreBox.querySelector('.box-imagem');
+        const inputNumero = lacreBox.querySelector('.lacre-numero-input');
+        const numeroLacre = inputNumero ? String(inputNumero.value || '').replace(/\D+/g, '').slice(0, 7) : '';
         return {
           numero: index + 1,
           local: lacreBox.querySelector('.lacre-local-select')?.value || '',
           foto: obterSrcBox(boxImagem),
-          ocr: obterOCRBox(boxImagem)
+          ocr: obterOCRBox(boxImagem),
+          numeroLacre,
+          numeroManual: inputNumero?.dataset.manual === '1'
         };
       });
     }
@@ -2123,6 +2298,15 @@
               <div class="foto-dica">Câmera do celular</div>
             </div>
           </div>
+
+          <div class="lacre-numero-wrap" style="margin-top:14px;">
+            <label>Número do lacre *</label>
+            <input type="text" inputmode="numeric" maxlength="7" class="lacre-numero-input" placeholder="0000000" autocomplete="off" oninput="onNumeroLacreInput(this)"
+              style="width:100%; box-sizing:border-box; padding:12px 14px; font-size:18px; font-weight:700; letter-spacing:4px; text-align:center; border:1px solid #cdd8d2; border-radius:10px;">
+            <p class="lacre-ocr-status" style="margin:8px 0 0; font-size:13px; color:#65756E;">Registre a foto para a leitura automática do número.</p>
+            <button type="button" class="btn-reprocessar" onclick="reprocessarLacre(this)"
+              style="display:none; margin-top:8px; padding:8px 14px; font-size:13px; font-weight:600; color:#00359D; background:#eef3ff; border:1px solid #c9d6f5; border-radius:9px; cursor:pointer;">Reprocessar leitura</button>
+          </div>
         </div>
       `;
 
@@ -2131,6 +2315,17 @@
 
       if (lacreData && lacreData.foto) {
         preencherBoxImagem(novoLacre.querySelector('.box-imagem'), lacreData.foto, lacreData.ocr || null);
+      }
+
+      if (lacreData) {
+        const inputNumero = novoLacre.querySelector('.lacre-numero-input');
+        const numeroSalvo = String(lacreData.numeroLacre || '').replace(/\D+/g, '').slice(0, 7);
+        if (inputNumero && numeroSalvo) {
+          inputNumero.value = numeroSalvo;
+          if (lacreData.numeroManual) inputNumero.dataset.manual = '1';
+          else inputNumero.dataset.auto = '1';
+        }
+        atualizarTextoOCRBox(novoLacre.querySelector('.box-imagem'));
       }
 
       document.getElementById('painel-lacres').style.display = 'block';
@@ -2143,6 +2338,7 @@
       if (lacre) {
         lacre.remove();
         reordenarLacres();
+        agendarAutoSave();
       }
     }
 
@@ -2273,6 +2469,20 @@
       return faltantes;
     }
 
+    function listarNumerosLacresFaltantes() {
+      const faltantes = [];
+
+      document.querySelectorAll('#container-lacres .lacre-box').forEach((lacreBox, index) => {
+        const input = lacreBox.querySelector('.lacre-numero-input');
+        const numero = String(input?.value || '').replace(/\D+/g, '');
+        const valido = numero.length === OCR_LACRE_TAMANHO_PREFERENCIAL;
+        if (input) input.style.borderColor = valido ? '#cdd8d2' : '#d9534f';
+        if (!valido) faltantes.push(`Lacre ${index + 1}`);
+      });
+
+      return faltantes;
+    }
+
     function validarQuantidadeLacres() {
       const qtdInformada = parseInt(document.getElementById('qtd-lacres').value || '0', 10);
       const qtdAtual = document.querySelectorAll('#container-lacres .lacre-box').length;
@@ -2305,11 +2515,13 @@
       `;
     }
 
-    function montarFotoPDF(label, src = '', ocr = null) {
+    function montarFotoPDF(label, src = '', numeroLacre = '') {
+      const numero = String(numeroLacre || '').replace(/\D+/g, '');
+      const temNumero = Boolean(numero);
       return `
         <div class="pdf-photo-card">
           <span>${escaparHTML(label)}</span>
-          <div class="pdf-lacre-ocr${classeResultadoOCR(ocr)}">${escaparHTML(formatarResultadoOCR(ocr))}</div>
+          <div class="pdf-lacre-ocr${temNumero ? '' : ' is-missing'}">${temNumero ? 'Lacre: ' + escaparHTML(numero) : 'Lacre não informado'}</div>
           <div class="pdf-photo-frame">
             ${src ? `<img src="${src}" alt="${escaparHTML(label)}">` : ''}
           </div>
@@ -2333,7 +2545,7 @@
             <strong>${escaparHTML(lacre.local || 'Local não informado')}</strong>
           </div>
 
-          ${montarFotoPDF('Foto do lacre', lacre.foto || '', lacre.ocr)}
+          ${montarFotoPDF('Foto do lacre', lacre.foto || '', lacre.numeroLacre || '')}
         </article>
       `;
     }
@@ -2453,6 +2665,7 @@
     }
 
     function limparChecklist(confirmarMensagem = true) {
+      limparRascunhoDB();
       aplicarCamposFormulario({ c:'', data: formatarData(new Date()), m:'', p:'', colaborador:'', q:'', nf:'' });
 
       document.getElementById('container-lacres').innerHTML = '';
@@ -2677,6 +2890,12 @@
           return;
         }
         await aguardarOCRUploadsPendentes();
+
+        const numerosFaltantes = listarNumerosLacresFaltantes();
+        if (numerosFaltantes.length) {
+          alert('Informe o número (7 dígitos) dos lacres abaixo, conferindo na foto:\n\n' + numerosFaltantes.join('\n'));
+          return;
+        }
         const dadosPDF = obterDadosPDF();
         registrarDiagnosticoOCR('pdf-dados-enviados', { contexto: 'Granel', lacres: resumirOCRParaDiagnostico() });
 
@@ -2756,6 +2975,22 @@
       }
     });
 
+    async function restaurarRascunho() {
+      let rascunho = null;
+      try {
+        rascunho = await lerRascunhoDB();
+      } catch (erro) {
+        console.warn('Falha ao ler rascunho:', erro);
+      }
+      if (!rascunho) return;
+      const campos = rascunho.campos || {};
+      const lacres = Array.isArray(rascunho.lacres) ? rascunho.lacres : [];
+      const temConteudo = lacres.some((l) => l.foto || l.numeroLacre || l.local)
+        || ['p', 'm', 'colaborador', 'nf', 'q'].some((k) => String(campos[k] || '').trim());
+      if (!temConteudo) return;
+      aplicarEstadoAtual({ campos, lacres });
+    }
+
     window.addEventListener('load', async () => {
       aplicarCamposFormulario({ data: formatarData(new Date()) });
       configurarCamposMaiusculos();
@@ -2764,10 +2999,16 @@
         await abrirBanco();
         await migrarLocalStorageParaIndexedDB();
         await recarregarPendentes();
+        await restaurarRascunho();
       } catch (erro) {
         console.error('Erro ao iniciar IndexedDB:', erro);
         alert('Não foi possível iniciar o armazenamento local neste dispositivo.');
       }
+
+      autoSaveAtivo = true;
+      document.addEventListener('input', agendarAutoSave);
+      document.addEventListener('change', agendarAutoSave);
+      window.addEventListener('pagehide', () => { encerrarWorkerOCR(); });
 
       sincronizarFotos();
 
