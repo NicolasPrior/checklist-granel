@@ -740,6 +740,9 @@
   <div id="status-conexao" role="status" aria-live="polite"
     style="display:none;position:fixed;left:20px;bottom:20px;z-index:30;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;color:#fff;font:700 12px/1 'Montserrat',sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.18);"></div>
 
+  <datalist id="dl-placa"></datalist>
+  <datalist id="dl-motorista"></datalist>
+
   <main id="render-area">
     <section class="hero-app">
       <div class="hero-brand">
@@ -799,12 +802,12 @@
 
           <div class="campo">
             <label for="m">Motorista *</label>
-            <div class="input-shell"><input type="text" id="m" placeholder="Nome completo" required></div>
+            <div class="input-shell"><input type="text" id="m" placeholder="Nome completo" list="dl-motorista" required></div>
           </div>
 
           <div class="campo">
             <label for="p">Placa do veículo *</label>
-            <div class="input-shell"><input type="text" id="p" placeholder="ABC-1234" maxlength="8" autocapitalize="characters" autocomplete="off" required></div>
+            <div class="input-shell"><input type="text" id="p" placeholder="ABC-1234" maxlength="8" autocapitalize="characters" autocomplete="off" list="dl-placa" required></div>
           </div>
 
           <div class="campo">
@@ -1221,6 +1224,45 @@
 
     function inicializarAssinaturas() {
       document.querySelectorAll('.assinatura-pad').forEach(inicializarAssinaturaPad);
+    }
+
+    // ===== Sugestões a partir do histórico (autocomplete + menos cliques) =====
+    let placaParaMotorista = {};
+
+    function preencherDatalist(id, valores) {
+      const dl = document.getElementById(id);
+      if (!dl) return;
+      dl.innerHTML = Array.from(valores).slice(0, 60).map((v) => `<option value="${escaparHTML(v)}"></option>`).join('');
+    }
+
+    async function atualizarSugestoesHistorico() {
+      let conferencias = [];
+      try { conferencias = await listarConferenciasDB(); } catch (erro) { return; }
+      const placas = new Set();
+      const motoristas = new Set();
+      placaParaMotorista = {};
+      // listarConferenciasDB já vem do mais recente para o mais antigo.
+      conferencias.forEach((c) => {
+        const campos = c.campos || {};
+        const placa = String(campos.p || '').trim();
+        const motorista = String(campos.m || '').trim();
+        if (placa) { placas.add(placa); if (!placaParaMotorista[placa] && motorista) placaParaMotorista[placa] = motorista; }
+        if (motorista) motoristas.add(motorista);
+      });
+      preencherDatalist('dl-placa', placas);
+      preencherDatalist('dl-motorista', motoristas);
+    }
+
+    function autoPreencherMotoristaPelaPlaca() {
+      const placaEl = document.getElementById('p');
+      const motoristaEl = document.getElementById('m');
+      if (!placaEl || !motoristaEl) return;
+      const motorista = placaParaMotorista[normalizarPlaca(placaEl.value)];
+      if (motorista && !String(motoristaEl.value || '').trim()) {
+        motoristaEl.value = motorista;
+        aplicarMaiusculoNoCampo(motoristaEl);
+        motoristaEl.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }
 
     async function excluirPendenteDB(id) {
@@ -3339,6 +3381,7 @@
             nomeArquivo
           });
           await limparRascunhoDB();
+          atualizarSugestoesHistorico();
         } catch (erroHist) {
           console.warn('Falha ao registrar conferência no histórico:', erroHist);
         }
@@ -3403,6 +3446,7 @@
         await migrarLocalStorageParaIndexedDB();
         await recarregarPendentes();
         await restaurarRascunho();
+        await atualizarSugestoesHistorico();
       } catch (erro) {
         console.error('Erro ao iniciar IndexedDB:', erro);
         alert('Não foi possível iniciar o armazenamento local neste dispositivo.');
@@ -3411,6 +3455,11 @@
       autoSaveAtivo = true;
       document.addEventListener('input', agendarAutoSave);
       document.addEventListener('change', agendarAutoSave);
+      const placaInput = document.getElementById('p');
+      if (placaInput) {
+        placaInput.addEventListener('change', autoPreencherMotoristaPelaPlaca);
+        placaInput.addEventListener('blur', autoPreencherMotoristaPelaPlaca);
+      }
       window.addEventListener('pagehide', () => { encerrarWorkerOCR(); });
 
       sincronizarFotos();
