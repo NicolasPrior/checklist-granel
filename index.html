@@ -835,6 +835,29 @@
 
         <div id="container-lacres"></div>
       </section>
+
+      <section class="panel" id="painel-assinaturas">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker">Validação</div>
+            <h3>Assinaturas</h3>
+            <p>Assine para validar a conferência. As assinaturas entram no PDF junto ao protocolo. (Opcional)</p>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px;">
+          <div>
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Assinatura do conferente</label>
+            <canvas class="assinatura-pad" data-assinatura="conferente" style="width:100%; height:150px; border:1px dashed #cdd8d2; border-radius:12px; background:#fff; touch-action:none; display:block;"></canvas>
+            <button type="button" class="btn btn-add" style="margin-top:8px;" onclick="limparAssinatura(document.querySelector('.assinatura-pad[data-assinatura=&quot;conferente&quot;]'))">Limpar assinatura</button>
+          </div>
+          <div>
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Assinatura do motorista</label>
+            <canvas class="assinatura-pad" data-assinatura="motorista" style="width:100%; height:150px; border:1px dashed #cdd8d2; border-radius:12px; background:#fff; touch-action:none; display:block;"></canvas>
+            <button type="button" class="btn btn-add" style="margin-top:8px;" onclick="limparAssinatura(document.querySelector('.assinatura-pad[data-assinatura=&quot;motorista&quot;]'))">Limpar assinatura</button>
+          </div>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -1122,6 +1145,82 @@
         'Data: ' + (campos.data || ''),
         'Lacres (' + numeros.length + '): ' + numeros.join(', ')
       ].join('\n');
+    }
+
+    // ===== Assinaturas (conferente / motorista) =====
+    function inicializarAssinaturaPad(canvas) {
+      if (!canvas || canvas.dataset.padReady === '1') return;
+      canvas.dataset.padReady = '1';
+      const ctx = canvas.getContext('2d');
+      function ajustarTamanho() {
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0a1f3c';
+      }
+      ajustarTamanho();
+      let desenhando = false;
+      let ultimo = null;
+      const posicao = (e) => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+      canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); desenhando = true; ultimo = posicao(e); try { canvas.setPointerCapture(e.pointerId); } catch (_) {} });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!desenhando) return;
+        e.preventDefault();
+        const p = posicao(e);
+        ctx.beginPath(); ctx.moveTo(ultimo.x, ultimo.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+        ultimo = p; canvas.dataset.assinado = '1';
+      });
+      const parar = () => { if (desenhando) { desenhando = false; agendarAutoSave(); } };
+      canvas.addEventListener('pointerup', parar);
+      canvas.addEventListener('pointerleave', parar);
+      canvas.addEventListener('pointercancel', parar);
+    }
+
+    function limparAssinatura(canvas) {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.dataset.assinado = '0';
+      agendarAutoSave();
+    }
+
+    function obterAssinaturaDataURL(canvas) {
+      return (canvas && canvas.dataset.assinado === '1') ? canvas.toDataURL('image/png') : '';
+    }
+
+    function desenharAssinatura(canvas, dataURL) {
+      if (!canvas || !dataURL) return;
+      inicializarAssinaturaPad(canvas);
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        const rect = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, rect.width || canvas.width, rect.height || canvas.height);
+        canvas.dataset.assinado = '1';
+      };
+      img.src = dataURL;
+    }
+
+    function coletarAssinaturas() {
+      return {
+        conferente: obterAssinaturaDataURL(document.querySelector('.assinatura-pad[data-assinatura="conferente"]')),
+        motorista: obterAssinaturaDataURL(document.querySelector('.assinatura-pad[data-assinatura="motorista"]'))
+      };
+    }
+
+    function aplicarAssinaturas(assinaturas = {}) {
+      const conf = document.querySelector('.assinatura-pad[data-assinatura="conferente"]');
+      const mot = document.querySelector('.assinatura-pad[data-assinatura="motorista"]');
+      if (conf) { limparAssinatura(conf); if (assinaturas.conferente) desenharAssinatura(conf, assinaturas.conferente); }
+      if (mot) { limparAssinatura(mot); if (assinaturas.motorista) desenharAssinatura(mot, assinaturas.motorista); }
+    }
+
+    function inicializarAssinaturas() {
+      document.querySelectorAll('.assinatura-pad').forEach(inicializarAssinaturaPad);
     }
 
     async function excluirPendenteDB(id) {
@@ -2632,6 +2731,7 @@
       return {
         campos,
         lacres,
+        assinaturas: coletarAssinaturas(),
         geradoEm: formatarDataHora(new Date())
       };
     }
@@ -2684,8 +2784,41 @@
       `;
     }
 
+    function montarBlocoAssinatura(rotulo, nome, imagem) {
+      return `
+        <div style="border:1px solid #e2e8e4; border-radius:12px; padding:12px 14px; background:#fff;">
+          <div style="height:84px; display:flex; align-items:center; justify-content:center;">
+            ${imagem ? `<img src="${imagem}" alt="Assinatura" style="max-width:100%; max-height:80px;">` : '<span style="color:#aab4ae; font-size:0.85em;">Sem assinatura</span>'}
+          </div>
+          <div style="border-top:1px solid #c9d4ce; margin-top:6px; padding-top:7px; text-align:center;">
+            <strong style="font-size:0.92em;">${escaparHTML(nome || '—')}</strong>
+            <div style="font-size:0.74em; color:#65756E; letter-spacing:.3px; margin-top:2px;">${escaparHTML(rotulo)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function montarSecaoAssinaturasPDF(campos, assinaturas) {
+      const a = assinaturas || {};
+      return `
+        <section class="pdf-section">
+          <div class="pdf-section-head">
+            <div>
+              <span>Validação</span>
+              <h2>Assinaturas</h2>
+            </div>
+            <p>Responsáveis pela conferência e pelo recebimento da carga.</p>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:6px;">
+            ${montarBlocoAssinatura('Conferente responsável', campos.colaborador, a.conferente)}
+            ${montarBlocoAssinatura('Motorista', campos.m, a.motorista)}
+          </div>
+        </section>
+      `;
+    }
+
     function construirPaginasPDF(dadosPDF = null) {
-      const { campos, lacres, geradoEm, codigo = '', qrDataUrl = '' } = dadosPDF || obterDadosPDF();
+      const { campos, lacres, geradoEm, codigo = '', qrDataUrl = '', assinaturas = {} } = dadosPDF || obterDadosPDF();
       const root = document.getElementById('pdf-render-root');
       const paginas = [];
       const totalPaginas = 1 + Math.ceil(lacres.length / 2);
@@ -2750,10 +2883,12 @@
                   ${montarMetaCard('Número da nota fiscal', campos.nf)}
                 </div>
               </section>
+
+              ${montarSecaoAssinaturasPDF(campos, assinaturas)}
             </div>
 
             <div class="pdf-footer">
-              <span>Relatório de carregamento a granel</span>
+              <span>${codigo ? 'Protocolo ' + escaparHTML(codigo) : 'Relatório de carregamento a granel'}</span>
               <strong>Dulcini S/A</strong>
             </div>
           </div>
@@ -2793,7 +2928,7 @@
               </div>
 
               <div class="pdf-footer">
-                <span>Lacres ${i + 1}${dupla.length === 2 ? ` e ${i + 2}` : ''}</span>
+                <span>Lacres ${i + 1}${dupla.length === 2 ? ` e ${i + 2}` : ''}${codigo ? ' • ' + escaparHTML(codigo) : ''}</span>
                 <strong>Dulcini S/A</strong>
               </div>
             </div>
@@ -2827,7 +2962,8 @@
     function coletarEstadoAtual() {
       return {
         campos: coletarCamposFormulario(),
-        lacres: coletarLacres()
+        lacres: coletarLacres(),
+        assinaturas: coletarAssinaturas()
       };
     }
 
@@ -2988,6 +3124,7 @@
         const dadosPDF = {
           campos: registro.campos || {},
           lacres: Array.isArray(registro.lacres) ? registro.lacres : [],
+          assinaturas: registro.assinaturas || {},
           geradoEm: registro.geradoEm || formatarDataHora(new Date()),
           codigo: registro.codigo || registro.id,
           qrDataUrl: registro.qrDataUrl || ''
@@ -3039,6 +3176,7 @@
 
       reordenarLacres();
       sincronizarFotos();
+      aplicarAssinaturas(snapshot.assinaturas || {});
     }
 
     async function recuperar(id) {
@@ -3196,6 +3334,7 @@
             geradoEm: dadosPDF.geradoEm,
             campos: dadosPDF.campos,
             lacres: dadosPDF.lacres,
+            assinaturas: dadosPDF.assinaturas || {},
             qrDataUrl: dadosPDF.qrDataUrl,
             nomeArquivo
           });
@@ -3251,12 +3390,13 @@
       const temConteudo = lacres.some((l) => l.foto || l.numeroLacre || l.local)
         || ['p', 'm', 'colaborador', 'nf', 'q'].some((k) => String(campos[k] || '').trim());
       if (!temConteudo) return;
-      aplicarEstadoAtual({ campos, lacres });
+      aplicarEstadoAtual({ campos, lacres, assinaturas: rascunho.assinaturas || {} });
     }
 
     window.addEventListener('load', async () => {
       aplicarCamposFormulario({ data: formatarData(new Date()) });
       configurarCamposMaiusculos();
+      inicializarAssinaturas();
 
       try {
         await abrirBanco();
