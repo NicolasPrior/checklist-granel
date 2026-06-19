@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checklist de carregamento a granel | Dulcini S/A</title>
 
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#00359D">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -729,6 +736,9 @@
   <button type="button" id="btn-abrir-pendentes" onclick="abrirPendentes()">
     Pendências <span id="count-pendentes">0</span>
   </button>
+
+  <div id="status-conexao" role="status" aria-live="polite"
+    style="display:none;position:fixed;left:20px;bottom:20px;z-index:30;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;color:#fff;font:700 12px/1 'Montserrat',sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.18);"></div>
 
   <main id="render-area">
     <section class="hero-app">
@@ -3270,6 +3280,33 @@
         document.getElementById('android-banner').style.display = 'flex';
       }
     });
+  </script>
+
+  <script>
+    // Indicador de conexão + Service Worker (operação offline). Bloco isolado: se algo aqui
+    // falhar, não afeta o app principal.
+    (function () {
+      function atualizarStatusConexao() {
+        var el = document.getElementById('status-conexao');
+        if (!el) return;
+        var online = navigator.onLine;
+        el.textContent = online ? '● Online' : '● Offline — trabalho salvo neste aparelho';
+        el.style.background = online ? '#0a7d33' : '#b25a00';
+        el.style.display = 'inline-flex';
+        if (online) { setTimeout(function () { if (navigator.onLine) el.style.display = 'none'; }, 2500); }
+      }
+      window.addEventListener('online', atualizarStatusConexao);
+      window.addEventListener('offline', atualizarStatusConexao);
+      window.addEventListener('load', atualizarStatusConexao);
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('sw.js').catch(function (e) {
+            console.warn('Falha ao registrar service worker:', e);
+          });
+        });
+      }
+    })();
   </script>
 </body>
 </html>
