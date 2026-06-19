@@ -56,6 +56,15 @@
       box-shadow:0 16px 30px rgba(0,53,157,.16);cursor:pointer;
     }
 
+    #btn-abrir-historico{
+      position:fixed;top:20px;right:160px;z-index:20;
+      border:1px solid rgba(255,255,255,.24);
+      background:linear-gradient(135deg,var(--azul-900),var(--teal-700));
+      color:#fff;padding:12px 18px;border-radius:999px;
+      font:700 13px/1 'Montserrat',sans-serif;letter-spacing:.04em;
+      box-shadow:0 16px 30px rgba(0,53,157,.16);cursor:pointer;
+    }
+
     #count-pendentes{
       display:inline-flex;align-items:center;justify-content:center;
       min-width:22px;height:22px;margin-left:8px;padding:0 7px;
@@ -691,7 +700,7 @@
     }
 
     @media (max-width: 860px){
-      #btn-abrir-pendentes{
+      #btn-abrir-pendentes,#btn-abrir-historico{
         position:relative;top:auto;right:auto;z-index:10;
         display:flex;align-items:center;justify-content:center;width:max-content;max-width:calc(100vw - 20px);
         margin:0 0 10px auto;padding:10px 14px;font-size:11px;
@@ -714,6 +723,9 @@
   </style>
 </head>
 <body>
+  <button type="button" id="btn-abrir-historico" onclick="abrirHistorico()">
+    Histórico
+  </button>
   <button type="button" id="btn-abrir-pendentes" onclick="abrirPendentes()">
     Pendências <span id="count-pendentes">0</span>
   </button>
@@ -830,6 +842,16 @@
     </div>
   </div>
 
+  <div id="modal-historico" style="display:none;position:fixed;inset:0;z-index:25;padding:20px;background:rgba(9,17,12,.56);backdrop-filter:blur(10px);">
+    <div class="modal-conteudo">
+      <h3>Histórico de conferências</h3>
+      <input type="search" id="busca-historico" placeholder="Buscar por cliente, placa, NF, motorista, lacre, protocolo ou data..." autocomplete="off"
+        oninput="renderizarHistorico()" style="width:100%; box-sizing:border-box; padding:12px 14px; margin-bottom:14px; border:1px solid var(--borda); border-radius:12px; font-size:14px;">
+      <div id="lista-historico-corpo" style="max-height:60vh; overflow-y:auto; padding-right:4px;"></div>
+      <button type="button" class="btn btn-add" style="width:100%; margin-top:14px;" onclick="fecharHistorico()">Fechar</button>
+    </div>
+  </div>
+
   <div id="loading">
     <div class="loading-card">
       <strong>Gerando PDF</strong>
@@ -846,10 +868,12 @@
     const STORAGE_KEY = 'dulcini_checklists_granel_pendentes';
     const LEGACY_STORAGE_KEYS = [STORAGE_KEY, 'checklists_granel_pendentes'];
     const DB_NAME = 'dulcini_checklists_granel_db';
-    const DB_VERSION = 2;
+    const DB_VERSION = 3;
     const STORE_NAME = 'pendentes';
     const RASCUNHO_STORE = 'rascunho-ativo';
     const RASCUNHO_KEY = 'atual';
+    const CONFERENCIAS_STORE = 'conferencias';
+    const CODIGO_PREFIXO = 'GRA';
 
     const LOGO_DATA_URL = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAwICQoJBwwKCQoNDAwOER0TERAQESMZGxUdKiUsKyklKCguNEI4LjE/MigoOk46P0RHSktKLTdRV1FIVkJJSkf/2wBDAQwNDREPESITEyJHMCgwR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0f/wAARCADtAPADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD1WiiigAooooAKKKKACiiigAooooAKKKz9d1SPR9InvpMExr8ik/eY9B+dNJt2Qm0ldmN4v8XJon+iWarNfMuTu+7EOxPv7VxMfjfxCk/mm+DjP3GiXb+gz+tZMSXms6sqAma6upep7k9/oP5Cu81XwDaR+HiLDc1/Cu8yEn98e646D2r0eWlRSjLVs8/mq1m5Rdkje8LeI4PEFkzBRFcxYEsWc49x7GtuvE/Deqto+uW93uIj3bJh6oev5dfwr2tWDKGUggjII71y4il7OWmzOmhV9pHXcWiiiuc6AooooAKKKKACiiigAooooAKKKKACiiigAopruka7nZVX1JwKSOSOQZjdXHqpzQA+kYhVLMQABkk9qWuf8b3b2vh51jODO4iJ9jkn9BSbsrkVJqnByfQo6j45t4ZmjsLY3AU48xm2qfp3NFj47tpHC31q8A/vod4/LrXL+HtHbWr824l8pEQuz4zjt0rU1LwTfWyl7KRbtR/Dja/5dD+dYKU3qjyI18XNe0itP6+Z3VlfWt/D5tnOkyeqnp9R2qxXjsct3p11ujaW2nQ89VYfUV1+ieNgxWDV1CnoJ0HH/Ah2+oq41E9zpo4+E3yz0Z2dFNjkSWNZInV0YZDKcginVqeiFeZ/ErWPtOpR6XC2Yrb5pMd5COn4D+deg6tfx6ZpdxfS/dhQtj1PYficCvFI0udW1ULnzLm7l6nuzHrXZhYXbm+hyYqdkoLdnbfDLR/9drEy+sUGf/Hj/T869Aqtp1lFp2nwWcAxHCgUe/qfx61Zrnqz55uRvShyRUTxnxjpg0vxJcwom2GQ+bF6bW7fgcivRvA2onUfDFuXbdLBmF/+A9P0xWL8UbAPZWmoKPmicxN9G5H6j9aofC6+8vUruwY8TRiRfqvB/Q/pXXP95QUuqOSH7uu49Gek0UUVwHeFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAeTfEK/uLnxNNayswgtgqxx545UEnHrzXO21zcWcoltZpIJByGjYqf0rrvidYmHWoL1V+W4i2sf9pf/rEVc+H6WOsaNc6XqNvFP5D70DjkK3oeo5B/OvUjNRoqVtDy5QcqzjfUpaN8Qr+1Kx6pGLyLoXXCyD+h/StjxTq1hrfhtJ9PuFk8udS6HhlyCOR+NVNc+HZG6bRJs9/s8x/9Bb/H864o29xYagILuF4JQcMjjB//AFVhUp0qsG4bhWlVhBwnqmdp8P5gmtzRHrJAcfgQa9CryzwpcfZvElm2cB2MZ/4EMfzxXqdebSfummXSvRt2ZR1PSbLVIfLvIQ5H3XHDL9DXB674Vu9L3TW+bm1HJYD5k+o/qK9KpOvWqlBSN6+Fp1lrv3PLND1+70aX90fNt2OXhY8H3Hoa9H0rVLXVbUT2j5HRlPDIfQiud8SeEUmD3ekoEl6vAOA/+76H26VyGn393pN6J7djHIpw6MOCO4YVmm4Oz2PPhVq4OXJU1idB8UNU2xW2lRty/wC+lA9Bwo/PJ/CqXwy0vz9Sm1ORcpbjZHn++ep/Afzrmdd1OTV9XnvpBjzDhVznao4Ar1rwppn9k+Hra2ZdspXzJf8Aebk/l0/CvWqfuqKj1Z1U/wB7Wc+iNeiiiuA7zI8WWf27wxfw7dzCIuo91+YfyryzwnefYvE9hNnCmURt9G+X+te0OodGRhlWGCK8IuEayv5UXhreYgexVuP5V3YX3oygcOK92UZnvNFRWswuLSGdekiK4/EZqWuE7gooooAKKKKACiiigAooooAKKKKACiiigDnfHemf2l4amKLmW2PnJgcnHUflmvO/B+qf2V4it5nbEMp8qXnja3f8Dg17KQCMEZBrxbxTpJ0fXbi1APksfMhPqh6flyPwruw0lKLps4sTFxkqiPaqo6tpFlq9t5N7AsmPuP0ZD6g9qzPA+sf2toEYkbNxbYil98dD+I/UGuhrjknCVjqTU436M8cRms75WP3oJQT9VP8A9avYY3EkaupyrAEfQ15Z4ntvsviK8jAwrPvH0YZ/rXoPhi5+1eHbOTOSsew/VeP6VzUtG0eZgPcqTps1KKKK3PWCuK+Iun2kWmnUl/dXJYR8D/WZ9fcAHmu1XjsXzX//2Q==';
     const WATERMARK_LOGO_DATA_URL = 'data:image/jpeg;base64,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';
@@ -896,6 +920,9 @@
           }
           if (!db.objectStoreNames.contains(RASCUNHO_STORE)) {
             db.createObjectStore(RASCUNHO_STORE);
+          }
+          if (!db.objectStoreNames.contains(CONFERENCIAS_STORE)) {
+            db.createObjectStore(CONFERENCIAS_STORE, { keyPath: 'id' });
           }
         };
 
@@ -988,6 +1015,103 @@
           console.warn('Auto-save falhou:', erro);
         }
       }, 700);
+    }
+
+    // ===== Histórico / rastreabilidade =====
+    // Código único (protocolo) por conferência: DUL-GRA-AAAAMMDD-XXXXXX.
+    function gerarCodigoUnico() {
+      const d = new Date();
+      const data = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const aleatorio = (Date.now().toString(36) + Math.random().toString(36).slice(2)).slice(-6).toUpperCase();
+      return `DUL-${CODIGO_PREFIXO}-${data}-${aleatorio}`;
+    }
+
+    async function salvarConferenciaDB(registro) {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(CONFERENCIAS_STORE, 'readwrite');
+        tx.objectStore(CONFERENCIAS_STORE).put(registro);
+        tx.oncomplete = () => resolve(registro);
+        tx.onerror = () => reject(tx.error || new Error('Erro ao salvar conferência no histórico.'));
+      });
+    }
+
+    async function listarConferenciasDB() {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(CONFERENCIAS_STORE, 'readonly');
+        const req = tx.objectStore(CONFERENCIAS_STORE).getAll();
+        req.onsuccess = () => {
+          const dados = Array.isArray(req.result) ? req.result : [];
+          dados.sort((a, b) => Number(b.dt || 0) - Number(a.dt || 0));
+          resolve(dados);
+        };
+        req.onerror = () => reject(req.error || new Error('Erro ao listar histórico.'));
+      });
+    }
+
+    async function obterConferenciaDB(id) {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(CONFERENCIAS_STORE, 'readonly');
+        const req = tx.objectStore(CONFERENCIAS_STORE).get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error || new Error('Erro ao ler conferência.'));
+      });
+    }
+
+    async function excluirConferenciaDB(id) {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(CONFERENCIAS_STORE, 'readwrite');
+        tx.objectStore(CONFERENCIAS_STORE).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('Erro ao excluir conferência.'));
+      });
+    }
+
+    // Gerador de QR Code embutido (carregado sob demanda). Best-effort: se a lib não
+    // carregar (ex.: offline antes do cache do PWA), o PDF sai sem QR mas com o protocolo.
+    let qrLibPromise = null;
+    function carregarBibliotecaQR() {
+      if (window.qrcode) return Promise.resolve(window.qrcode);
+      if (qrLibPromise) return qrLibPromise;
+      qrLibPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        const timeout = setTimeout(() => reject(new Error('Tempo limite ao carregar QR.')), 12000);
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+        script.async = true;
+        script.onload = () => { clearTimeout(timeout); window.qrcode ? resolve(window.qrcode) : reject(new Error('QR sem objeto.')); };
+        script.onerror = () => { clearTimeout(timeout); reject(new Error('Falha ao carregar QR.')); };
+        document.head.appendChild(script);
+      });
+      return qrLibPromise;
+    }
+
+    async function gerarQRDataURL(texto) {
+      try {
+        const qrcode = await carregarBibliotecaQR();
+        const qr = qrcode(0, 'M');
+        qr.addData(String(texto || ''));
+        qr.make();
+        return qr.createDataURL(6, 10);
+      } catch (erro) {
+        console.warn('QR indisponível:', erro);
+        return '';
+      }
+    }
+
+    function montarTextoQRConferencia(codigo, campos, lacres) {
+      const numeros = (Array.isArray(lacres) ? lacres : []).map((l) => l.numeroLacre).filter(Boolean);
+      return [
+        'Dulcini S/A - Checklist Granel',
+        'Protocolo: ' + codigo,
+        'Cliente: ' + (campos.c || ''),
+        'Placa: ' + (campos.p || ''),
+        'NF: ' + (campos.nf || ''),
+        'Data: ' + (campos.data || ''),
+        'Lacres (' + numeros.length + '): ' + numeros.join(', ')
+      ].join('\n');
     }
 
     async function excluirPendenteDB(id) {
@@ -2551,7 +2675,7 @@
     }
 
     function construirPaginasPDF(dadosPDF = null) {
-      const { campos, lacres, geradoEm } = dadosPDF || obterDadosPDF();
+      const { campos, lacres, geradoEm, codigo = '', qrDataUrl = '' } = dadosPDF || obterDadosPDF();
       const root = document.getElementById('pdf-render-root');
       const paginas = [];
       const totalPaginas = 1 + Math.ceil(lacres.length / 2);
@@ -2574,6 +2698,13 @@
                 </div>
 
                 <div class="pdf-hero-side">
+                  ${codigo ? `<div class="pdf-highlight" style="display:flex; align-items:center; gap:12px;">
+                    <div style="flex:1; min-width:0;">
+                      <span>Protocolo de conferência</span>
+                      <strong style="font-size:0.82em; letter-spacing:0.4px; word-break:break-all;">${escaparHTML(codigo)}</strong>
+                    </div>
+                    ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR do protocolo" style="width:84px; height:84px; flex:0 0 auto; background:#fff; border-radius:6px;">` : ''}
+                  </div>` : ''}
                   <div class="pdf-highlight">
                     <span>Tipo de carga</span>
                     <strong>${escaparHTML(campos.tp)}</strong>
@@ -2774,6 +2905,105 @@
       if (modal) modal.style.display = 'none';
     }
 
+    let conferenciasCache = [];
+
+    async function abrirHistorico() {
+      try {
+        conferenciasCache = await listarConferenciasDB();
+      } catch (erro) {
+        console.error('Erro ao carregar histórico:', erro);
+        conferenciasCache = [];
+      }
+      const busca = document.getElementById('busca-historico');
+      if (busca) busca.value = '';
+      renderizarHistorico();
+      document.getElementById('modal-historico').style.display = 'block';
+    }
+
+    function fecharHistorico() {
+      const modal = document.getElementById('modal-historico');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function textoBuscaConferencia(c) {
+      const campos = c.campos || {};
+      const lacres = (Array.isArray(c.lacres) ? c.lacres : []).map((l) => l.numeroLacre).join(' ');
+      return [c.codigo, campos.c, campos.p, campos.nf, campos.m, campos.data, campos.colaborador, lacres, c.geradoEm]
+        .map((v) => String(v || '').toLowerCase()).join(' ');
+    }
+
+    function renderizarHistorico() {
+      const corpo = document.getElementById('lista-historico-corpo');
+      if (!corpo) return;
+      const termo = String(document.getElementById('busca-historico')?.value || '').trim().toLowerCase();
+      const lista = termo
+        ? conferenciasCache.filter((c) => termo.split(/\s+/).every((t) => textoBuscaConferencia(c).includes(t)))
+        : conferenciasCache;
+
+      if (!conferenciasCache.length) {
+        corpo.innerHTML = '<p style="text-align:center; color:#65756E; padding:24px 10px;">Nenhuma conferência registrada ainda. Ao gerar um PDF, ele fica salvo aqui automaticamente.</p>';
+        return;
+      }
+      if (!lista.length) {
+        corpo.innerHTML = '<p style="text-align:center; color:#65756E; padding:24px 10px;">Nenhum resultado para a busca.</p>';
+        return;
+      }
+
+      corpo.innerHTML = lista.map((c) => {
+        const campos = c.campos || {};
+        const totalLacres = Array.isArray(c.lacres) ? c.lacres.length : 0;
+        const numeros = (Array.isArray(c.lacres) ? c.lacres : []).map((l) => escaparHTML(l.numeroLacre || '—')).join(', ');
+        return `
+          <div class="pendente-card">
+            <strong>${escaparHTML(campos.p || '—')} • NF ${escaparHTML(campos.nf || '—')}</strong>
+            <small>${escaparHTML(campos.c || '')}</small>
+            <small>${escaparHTML(c.geradoEm || '')} • ${totalLacres} lacre(s)</small>
+            <small>Protocolo: ${escaparHTML(c.codigo || '')}</small>
+            <small>Lacres: ${numeros}</small>
+            <div class="pendente-acoes">
+              <button type="button" class="pendente-retomar" onclick="reimprimirConferencia('${escaparHTML(c.id)}')">Baixar PDF</button>
+              <button type="button" class="pendente-excluir" aria-label="Excluir do histórico" title="Excluir do histórico" onclick="excluirConferencia('${escaparHTML(c.id)}')">X</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function reimprimirConferencia(id) {
+      const loading = document.getElementById('loading');
+      try {
+        const registro = await obterConferenciaDB(id);
+        if (!registro) { alert('Conferência não encontrada no histórico.'); return; }
+        loading.style.display = 'block';
+        const dadosPDF = {
+          campos: registro.campos || {},
+          lacres: Array.isArray(registro.lacres) ? registro.lacres : [],
+          geradoEm: registro.geradoEm || formatarDataHora(new Date()),
+          codigo: registro.codigo || registro.id,
+          qrDataUrl: registro.qrDataUrl || ''
+        };
+        const nomeArquivo = registro.nomeArquivo || montarNomeArquivoPDF(dadosPDF.campos, dadosPDF.codigo);
+        await renderizarEbaixarPDF(dadosPDF, nomeArquivo);
+      } catch (erro) {
+        console.error('Erro ao reimprimir:', erro);
+        alert('Não foi possível gerar o PDF desta conferência.');
+      } finally {
+        setTimeout(() => { loading.style.display = 'none'; }, 500);
+      }
+    }
+
+    async function excluirConferencia(id) {
+      if (!confirm('Excluir esta conferência do histórico deste dispositivo? O PDF já baixado não é afetado.')) return;
+      try {
+        await excluirConferenciaDB(id);
+        conferenciasCache = await listarConferenciasDB();
+        renderizarHistorico();
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível excluir do histórico.');
+      }
+    }
+
     async function excluirItem(id) {
       if (!confirm('Deseja excluir este checklist pendente?')) return;
 
@@ -2859,6 +3089,46 @@
       return alturaPagina < 210 ? 'landscape' : 'portrait';
     }
 
+    async function renderizarEbaixarPDF(dadosPDF, nomeArquivo) {
+      atualizarStatusLoading('Montando as páginas do checklist...');
+      const root = construirPaginasPDF(dadosPDF);
+
+      await esperar(300);
+      await aguardarImagensCarregadas(root);
+
+      const paginas = Array.from(root.querySelectorAll('.pdf-page'));
+      if (!paginas.length) {
+        throw new Error('Nenhuma página foi gerada para o PDF.');
+      }
+
+      const configPDF = obterConfiguracaoPDF();
+      atualizarStatusLoading('Convertendo as páginas em PDF...');
+      const alturaPrimeiraPagina = obterAlturaPaginaPDF(paginas[0]);
+      const doc = new jsPDF({
+        orientation: obterOrientacaoPaginaPDF(alturaPrimeiraPagina),
+        unit: 'mm',
+        format: [210, alturaPrimeiraPagina],
+        compress: false
+      });
+
+      for (let i = 0; i < paginas.length; i++) {
+        atualizarStatusLoading(`Gerando a página ${i + 1} de ${paginas.length}...`);
+        const alturaPagina = obterAlturaPaginaPDF(paginas[i]);
+        const imagem = await renderizarPaginaParaImagem(paginas[i], configPDF.escalaCanvas);
+        if (i > 0) doc.addPage([210, alturaPagina], obterOrientacaoPaginaPDF(alturaPagina));
+        doc.addImage(imagem, 'PNG', 0, 0, 210, alturaPagina);
+      }
+
+      atualizarStatusLoading('Salvando o arquivo PDF...');
+      const blob = doc.output('blob');
+      baixarBlob(blob, nomeArquivo);
+    }
+
+    function montarNomeArquivoPDF(campos, codigo) {
+      const base = campos.nf || campos.p || campos.data || 'checklist_granel';
+      return `Checklist_Granel_${limparNomeArquivo(base)}_${codigo}.pdf`;
+    }
+
     async function gerarPDF() {
       const loading = document.getElementById('loading');
       loading.style.display = 'block';
@@ -2899,50 +3169,33 @@
         const dadosPDF = obterDadosPDF();
         registrarDiagnosticoOCR('pdf-dados-enviados', { contexto: 'Granel', lacres: resumirOCRParaDiagnostico() });
 
-        atualizarStatusLoading('Montando as páginas do checklist...');
-        const root = construirPaginasPDF(dadosPDF);
+        atualizarStatusLoading('Gerando protocolo e QR Code...');
+        dadosPDF.codigo = gerarCodigoUnico();
+        dadosPDF.qrDataUrl = await gerarQRDataURL(montarTextoQRConferencia(dadosPDF.codigo, dadosPDF.campos, dadosPDF.lacres));
 
-        await esperar(300);
-        await aguardarImagensCarregadas(root);
+        const nomeArquivo = montarNomeArquivoPDF(dadosPDF.campos, dadosPDF.codigo);
+        await renderizarEbaixarPDF(dadosPDF, nomeArquivo);
 
-        const paginas = Array.from(root.querySelectorAll('.pdf-page'));
-        if (!paginas.length) {
-          throw new Error('Nenhuma página foi gerada para o PDF.');
+        // Registra a conferência concluída no histórico local (rastreabilidade + reimpressão).
+        try {
+          await salvarConferenciaDB({
+            id: dadosPDF.codigo,
+            codigo: dadosPDF.codigo,
+            tipo: 'granel',
+            dt: Date.now(),
+            geradoEm: dadosPDF.geradoEm,
+            campos: dadosPDF.campos,
+            lacres: dadosPDF.lacres,
+            qrDataUrl: dadosPDF.qrDataUrl,
+            nomeArquivo
+          });
+          await limparRascunhoDB();
+        } catch (erroHist) {
+          console.warn('Falha ao registrar conferência no histórico:', erroHist);
         }
-
-        const configPDF = obterConfiguracaoPDF();
-        const campos = coletarCamposFormulario();
-        const nomeBase = campos.nf || campos.p || campos.data || 'checklist_granel';
-        const nomeArquivo = `Checklist_Granel_${limparNomeArquivo(nomeBase)}.pdf`;
-
-        atualizarStatusLoading('Convertendo as páginas em PDF...');
-        const alturaPrimeiraPagina = obterAlturaPaginaPDF(paginas[0]);
-        const doc = new jsPDF({
-          orientation: obterOrientacaoPaginaPDF(alturaPrimeiraPagina),
-          unit: 'mm',
-          format: [210, alturaPrimeiraPagina],
-          compress: false
-        });
-
-        for (let i = 0; i < paginas.length; i++) {
-          atualizarStatusLoading(`Gerando a página ${i + 1} de ${paginas.length}...`);
-          const alturaPagina = obterAlturaPaginaPDF(paginas[i]);
-
-          const imagem = await renderizarPaginaParaImagem(
-            paginas[i],
-            configPDF.escalaCanvas
-          );
-
-          if (i > 0) doc.addPage([210, alturaPagina], obterOrientacaoPaginaPDF(alturaPagina));
-          doc.addImage(imagem, 'PNG', 0, 0, 210, alturaPagina);
-        }
-
-        atualizarStatusLoading('Salvando o arquivo PDF...');
-        const blob = doc.output('blob');
-        baixarBlob(blob, nomeArquivo);
 
         setTimeout(() => {
-          const desejaNovo = confirm('Deseja iniciar um novo checklist?');
+          const desejaNovo = confirm('PDF gerado e registrado no histórico.\nProtocolo: ' + dadosPDF.codigo + '\n\nDeseja iniciar um novo checklist?');
           if (desejaNovo) limparChecklist(true);
         }, 450);
 
