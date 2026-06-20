@@ -1687,7 +1687,9 @@
         // Sem certeza: mostra o palpite ao lado, mas NAO preenche o campo (decisao do operador).
         definirStatusLacre(status, 'Leitura provável: ' + ocr.sugestao + ' — confira na foto e digite para confirmar.', '#b25a00');
       } else {
-        definirStatusLacre(status, 'Não foi possível ler. Digite o número do lacre conferindo na foto.', '#b25a00');
+        // Sinal CONFIAVEL de foto ruim: o motor rodou e nao achou leitura nem palpite.
+        // (Nao usamos nitidez/brilho pre-captura — nas fotos reais eles nao separam boa de ruim.)
+        definirStatusLacre(status, 'Foto difícil de ler. Toque na foto para refazer (aproxime, mais luz, sem reflexo) ou digite o número conferindo na foto.', '#b25a00');
       }
     }
 
@@ -1946,7 +1948,7 @@
             <div class="foto-col">
               <label>Foto do lacre</label>
               <div class="box-imagem">
-                <span class="msg-camera"><strong>Registrar foto</strong><small>Toque para abrir a câmera do celular.</small></span>
+                <span class="msg-camera"><strong>Registrar foto</strong><small>Toque para abrir a câmera. Aproxime do lacre, com boa luz e sem reflexo.</small></span>
                 <input type="file" accept="image/*" capture="environment" onchange="preview(this)">
                 <img alt="Foto do lacre">
               </div>
