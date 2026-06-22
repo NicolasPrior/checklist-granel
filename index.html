@@ -684,16 +684,6 @@
       font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
     }
 
-    .pdf-lacre-ocr{
-      margin:0 0 4px;padding:6px 8px;border-radius:8px;text-align:center;
-      background:#F0F7F2;color:var(--verde-900);border:1px solid #DCEBE2;
-      font:800 10px/1.1 'Montserrat',sans-serif;
-    }
-
-    .pdf-lacre-ocr.is-missing{
-      background:#FFF8E0;color:#7A5A00;border-color:#F1DA85;
-    }
-
     .pdf-photo-frame{
       overflow:hidden;display:flex;align-items:center;justify-content:center;height:342px;
       border-radius:10px;background:#F7FBF8;border:1px solid #E6EFE8;padding:3px;
@@ -866,7 +856,7 @@
   <div id="modal-historico" style="display:none;position:fixed;inset:0;z-index:25;padding:20px;background:rgba(9,17,12,.56);backdrop-filter:blur(10px);">
     <div class="modal-conteudo">
       <h3>Histórico de conferências</h3>
-      <input type="search" id="busca-historico" placeholder="Buscar por cliente, placa, NF, motorista, lacre, protocolo ou data..." autocomplete="off"
+      <input type="search" id="busca-historico" placeholder="Buscar por cliente, placa, NF, motorista, protocolo ou data..." autocomplete="off"
         oninput="renderizarHistorico()" style="width:100%; box-sizing:border-box; padding:12px 14px; margin-bottom:14px; border:1px solid var(--borda); border-radius:12px; font-size:14px;">
       <div id="lista-historico-corpo" style="max-height:60vh; overflow-y:auto; padding-right:4px;"></div>
       <button type="button" class="btn btn-add" style="width:100%; margin-top:14px;" onclick="fecharHistorico()">Fechar</button>
@@ -883,7 +873,6 @@
 
   <div id="pdf-render-root" aria-hidden="true"></div>
 
-  <script src="dulcini-core.js"></script>
   <script>
     const TIPO_CARGA_FIXO = 'GRANEL';
     const CLIENTE_PADRAO = 'HEINZ BRASIL S/A';
@@ -916,7 +905,6 @@
     const { jsPDF } = window.jspdf;
     let dbInstance = null;
     let pendentes = [];
-    // [OCR] Constantes e estado do OCR movidos para dulcini-core.js (nucleo compartilhado).
 
     function abrirBanco() {
       if (dbInstance) return Promise.resolve(dbInstance);
@@ -1079,50 +1067,6 @@
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error || new Error('Erro ao excluir conferência.'));
       });
-    }
-
-    // Gerador de QR Code embutido (carregado sob demanda). Best-effort: se a lib não
-    // carregar (ex.: offline antes do cache do PWA), o PDF sai sem QR mas com o protocolo.
-    let qrLibPromise = null;
-    function carregarBibliotecaQR() {
-      if (window.qrcode) return Promise.resolve(window.qrcode);
-      if (qrLibPromise) return qrLibPromise;
-      qrLibPromise = new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        const timeout = setTimeout(() => reject(new Error('Tempo limite ao carregar QR.')), 12000);
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
-        script.async = true;
-        script.onload = () => { clearTimeout(timeout); window.qrcode ? resolve(window.qrcode) : reject(new Error('QR sem objeto.')); };
-        script.onerror = () => { clearTimeout(timeout); reject(new Error('Falha ao carregar QR.')); };
-        document.head.appendChild(script);
-      });
-      return qrLibPromise;
-    }
-
-    async function gerarQRDataURL(texto) {
-      try {
-        const qrcode = await carregarBibliotecaQR();
-        const qr = qrcode(0, 'M');
-        qr.addData(String(texto || ''));
-        qr.make();
-        return qr.createDataURL(6, 10);
-      } catch (erro) {
-        console.warn('QR indisponível:', erro);
-        return '';
-      }
-    }
-
-    function montarTextoQRConferencia(codigo, campos, lacres) {
-      const numeros = (Array.isArray(lacres) ? lacres : []).map((l) => l.numeroLacre).filter(Boolean);
-      return [
-        'Dulcini S/A - Checklist Granel',
-        'Protocolo: ' + codigo,
-        'Cliente: ' + (campos.c || ''),
-        'Placa: ' + (campos.p || ''),
-        'NF: ' + (campos.nf || ''),
-        'Data: ' + (campos.data || ''),
-        'Lacres (' + numeros.length + '): ' + numeros.join(', ')
-      ].join('\n');
     }
 
     // ===== Sugestões a partir do histórico (autocomplete + menos cliques) =====
@@ -1370,20 +1314,6 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // [OCR] Motor de leitura de lacres movido para dulcini-core.js (nucleo compartilhado).
-
-    function formatarResultadoOCR(ocr) {
-      if (ocr?.identificado && ocr.numero) {
-        return 'Lacre: ' + ocr.numero;
-      }
-
-      return OCR_LACRE_NAO_IDENTIFICADO;
-    }
-
-    function classeResultadoOCR(ocr) {
-      return ocr?.identificado ? '' : ' is-missing';
-    }
-
     async function aguardarImagensCarregadas(container) {
       const imagens = Array.from(container.querySelectorAll('img')).filter(img => img.getAttribute('src'));
 
@@ -1443,280 +1373,16 @@
       root.querySelectorAll('.box-imagem').forEach(sincronizarCaixa);
     }
 
-    function preencherBoxImagem(box, src, ocr = undefined) {
+    function preencherBoxImagem(box, src) {
       const img = box.querySelector('img');
 
       if (src) {
         img.setAttribute('src', src);
-        if (deveExecutarOCRBox(box)) {
-          definirOCRBox(box, ocr ?? null);
-        } else {
-          limparOCRBox(box);
-        }
       } else {
         img.removeAttribute('src');
-        limparOCRBox(box);
       }
 
       sincronizarCaixa(box);
-    }
-
-    function deveExecutarOCRBox(box) {
-      if (!box) return false;
-      if (box.dataset.fotoTipo) return box.dataset.fotoTipo === 'lacre';
-      return Boolean(box.closest('.lacre-box'));
-    }
-
-    function normalizarResultadoOCRBox(ocr = null) {
-      return {
-        identificado: Boolean(ocr?.identificado && ocr?.numero),
-        numero: ocr?.numero ? limparNumeroLacreOCR(ocr.numero) : '',
-        confianca: Number(ocr?.confianca || 0),
-        sugestao: ocr?.sugestao ? limparNumeroLacreOCR(ocr.sugestao) : '',
-        sugestaoConfianca: Number(ocr?.sugestaoConfianca || ocr?.confianca || 0),
-        // horario so vem preenchido quando restaurado do rascunho; leitura nova gera na hora.
-        horario: ocr?.horario || ''
-      };
-    }
-
-    function definirOCRBox(box, ocr = null) {
-      if (!box) return;
-      const resultado = normalizarResultadoOCRBox(ocr);
-      box.dataset.ocrStatus = 'done';
-      box.dataset.ocrIdentificado = resultado.identificado ? '1' : '0';
-      box.dataset.ocrNumero = resultado.numero;
-      box.dataset.ocrConfianca = String(Math.round(resultado.confianca));
-      box.dataset.ocrSugestao = resultado.sugestao;
-      box.dataset.ocrSugestaoConfianca = String(Math.round(resultado.sugestaoConfianca));
-      // Horario da leitura (rastreabilidade): preserva o do rascunho restaurado; senao, marca
-      // a hora da leitura nova. Sem resultado util, limpa para a proxima foto gerar hora fresca.
-      if (resultado.horario) {
-        box.dataset.ocrHorario = resultado.horario;
-      } else if (resultado.identificado || resultado.sugestao) {
-        box.dataset.ocrHorario = new Date().toISOString();
-      } else {
-        delete box.dataset.ocrHorario;
-      }
-      atualizarTextoOCRBox(box);
-      agendarAutoSave();
-    }
-
-    function limparOCRBox(box) {
-      if (!box) return;
-      delete box.dataset.ocrStatus;
-      delete box.dataset.ocrIdentificado;
-      delete box.dataset.ocrNumero;
-      delete box.dataset.ocrConfianca;
-      delete box.dataset.ocrSugestao;
-      delete box.dataset.ocrSugestaoConfianca;
-      delete box.dataset.ocrHorario;
-      delete box.dataset.ocrNomeImagem;
-      atualizarTextoOCRBox(box);
-    }
-
-    function obterOCRBox(box) {
-      if (!box || box.dataset.ocrStatus !== 'done') return null;
-      return {
-        identificado: box.dataset.ocrIdentificado === '1' && Boolean(box.dataset.ocrNumero),
-        numero: box.dataset.ocrNumero || '',
-        confianca: Number(box.dataset.ocrConfianca || 0),
-        sugestao: box.dataset.ocrSugestao || '',
-        sugestaoConfianca: Number(box.dataset.ocrSugestaoConfianca || 0),
-        horario: box.dataset.ocrHorario || ''
-      };
-    }
-
-    function obterRegistroFotoBox(box) {
-      return {
-        src: obterSrcBox(box),
-        ocr: obterOCRBox(box)
-      };
-    }
-
-    function definirStatusLacre(status, texto, cor) {
-      if (!status) return;
-      status.textContent = texto;
-      status.style.color = cor;
-    }
-
-    function atualizarTextoOCRBox(box) {
-      if (!box || !deveExecutarOCRBox(box)) return;
-      const lacreBox = box.closest('.lacre-box');
-      const dica = box.closest('.foto-col')?.querySelector('.foto-dica')
-        || box.closest('.registro-card')?.querySelector('.foto-dica');
-      const status = lacreBox?.querySelector('.lacre-ocr-status');
-      const input = lacreBox?.querySelector('.lacre-numero-input');
-      const botao = lacreBox?.querySelector('.btn-reprocessar');
-      const temFoto = Boolean(obterSrcBox(box));
-
-      if (dica && !dica.dataset.textoPadrao) {
-        dica.dataset.textoPadrao = dica.innerText || 'Câmera do celular';
-      }
-      if (botao) botao.style.display = temFoto ? 'inline-flex' : 'none';
-
-      if (!temFoto) {
-        if (dica) dica.innerText = dica.dataset.textoPadrao;
-        definirStatusLacre(status, 'Registre a foto para a leitura automática do número.', '#65756E');
-        return;
-      }
-
-      const estado = box.dataset.ocrStatus;
-      if (estado === 'processing' || estado === 'queued') {
-        if (dica) dica.innerText = 'Lendo número do lacre...';
-        definirStatusLacre(status, 'Lendo número do lacre...', '#65756E');
-        return;
-      }
-
-      const ocr = obterOCRBox(box);
-      if (dica) dica.innerText = formatarResultadoOCR(ocr);
-
-      // So preenche o campo automaticamente em leitura CONFIAVEL e se o operador ainda nao digitou.
-      if (ocr?.identificado && ocr.numero && input && input.dataset.manual !== '1'
-        && (!input.value || input.dataset.auto === '1')) {
-        input.value = ocr.numero;
-        input.dataset.auto = '1';
-      } else if (input && input.dataset.manual !== '1' && input.dataset.auto === '1' && !ocr?.identificado) {
-        // Foto trocada e a nova leitura nao e confiavel: limpa o numero auto-preenchido antigo
-        // (era de outra foto) para nao deixar um numero ERRADO no campo.
-        input.value = '';
-        delete input.dataset.auto;
-      }
-
-      if (input && input.dataset.manual === '1') {
-        definirStatusLacre(status, 'Número informado manualmente.', '#0a7d33');
-      } else if (ocr?.identificado && ocr.numero) {
-        definirStatusLacre(status, 'Lido automaticamente: ' + ocr.numero + ' — confira com a foto.', '#0a7d33');
-      } else if (ocr?.sugestao) {
-        // Sem certeza: mostra o palpite ao lado, mas NAO preenche o campo (decisao do operador).
-        definirStatusLacre(status, 'Leitura provável: ' + ocr.sugestao + ' — confira na foto e digite para confirmar.', '#b25a00');
-      } else {
-        // Sinal CONFIAVEL de foto ruim: o motor rodou e nao achou leitura nem palpite.
-        // (Nao usamos nitidez/brilho pre-captura — nas fotos reais eles nao separam boa de ruim.)
-        definirStatusLacre(status, 'Foto difícil de ler. Toque na foto para refazer (aproxime, mais luz, sem reflexo) ou digite o número conferindo na foto.', '#b25a00');
-      }
-    }
-
-    function onNumeroLacreInput(input) {
-      const valor = String(input.value || '').replace(/\D+/g, '').slice(0, 7);
-      if (input.value !== valor) input.value = valor;
-      input.dataset.manual = '1';
-      delete input.dataset.auto;
-      const status = input.closest('.lacre-numero-wrap')?.querySelector('.lacre-ocr-status');
-      definirStatusLacre(status, valor ? 'Número informado manualmente.' : 'Digite o número do lacre (7 dígitos).', valor ? '#0a7d33' : '#65756E');
-      agendarAutoSave();
-    }
-
-    async function reprocessarLacre(botao) {
-      const lacreBox = botao.closest('.lacre-box');
-      const box = lacreBox?.querySelector('.box-imagem');
-      const src = box ? obterSrcBox(box) : '';
-      if (!src) {
-        alert('Registre a foto do lacre antes de reprocessar a leitura.');
-        return;
-      }
-      const input = lacreBox.querySelector('.lacre-numero-input');
-      if (input) {
-        delete input.dataset.auto;
-        delete input.dataset.manual;
-      }
-      await executarOCRUploadBox(box, src, 'Granel - reprocessar lacre', box.dataset.ocrNomeImagem || '');
-    }
-
-    let filaOCRUpload = Promise.resolve();
-    const pendenciasOCRUpload = new Set();
-
-    function registrarDiagnosticoOCR(etapa, dados = {}) {
-      console.info('[Diagnostico OCR Lacre]', {
-        etapa,
-        horario: new Date().toISOString(),
-        ...dados
-      });
-    }
-
-    function registrarPendenciaOCR(promessa) {
-      pendenciasOCRUpload.add(promessa);
-      promessa.finally(() => pendenciasOCRUpload.delete(promessa));
-      return promessa;
-    }
-
-    async function aguardarOCRUploadsPendentes() {
-      while (pendenciasOCRUpload.size) {
-        atualizarStatusLoading('Concluindo a leitura dos lacres...');
-        await Promise.allSettled(Array.from(pendenciasOCRUpload));
-      }
-    }
-
-    function resumirOCRParaDiagnostico() {
-      return Array.from(document.querySelectorAll('.box-imagem'))
-        .filter((box) => deveExecutarOCRBox(box) && obterSrcBox(box))
-        .map((box, index) => ({
-          indice: index + 1,
-          nomeImagem: box.dataset.ocrNomeImagem || '',
-          status: box.dataset.ocrStatus || 'sem status',
-          valorSalvo: obterOCRBox(box)
-        }));
-    }
-
-    async function executarOCRUploadBox(box, src, contexto = 'Upload de lacre', nomeImagem = '', srcOCR = null) {
-      if (!box || !src || !deveExecutarOCRBox(box)) return null;
-
-      // O OCR roda numa versao SEM PERDAS (PNG) da foto; o JPEG comprimido fica so para
-      // armazenamento/PDF. Artefatos de JPEG degradam os digitos de baixo contraste do lacre.
-      const fonteOCR = srcOCR || src;
-
-      box.dataset.ocrStatus = 'queued';
-      box.dataset.ocrNomeImagem = nomeImagem || '';
-      atualizarTextoOCRBox(box);
-
-      const tarefa = async () => {
-        if (obterSrcBox(box) !== src) {
-          registrarDiagnosticoOCR('upload-ignorado-foto-substituida', { contexto, nomeImagem });
-          return null;
-        }
-
-        box.dataset.ocrStatus = 'processing';
-        atualizarTextoOCRBox(box);
-        registrarDiagnosticoOCR('upload-inicio', { contexto, nomeImagem });
-
-        try {
-          const resultado = await identificarNumeroLacreNaFoto(fonteOCR, contexto);
-
-          if (obterSrcBox(box) !== src) {
-            registrarDiagnosticoOCR('resultado-descartado-foto-substituida', {
-              contexto,
-              nomeImagem,
-              resultadoBruto: resultado
-            });
-            return resultado;
-          }
-
-          definirOCRBox(box, resultado);
-          registrarDiagnosticoOCR('upload-resultado-salvo', {
-            contexto,
-            nomeImagem,
-            resultadoBruto: resultado,
-            valorSalvo: obterOCRBox(box)
-          });
-          return resultado;
-        } catch (erro) {
-          registrarFalhaOCR(contexto, 'falha tecnica no OCR do upload', { erro });
-          const resultado = { identificado: false, numero: '', confianca: 0 };
-          definirOCRBox(box, resultado);
-          registrarDiagnosticoOCR('upload-falha-salva', {
-            contexto,
-            nomeImagem,
-            erro: erro?.message || String(erro),
-            valorSalvo: obterOCRBox(box)
-          });
-          return resultado;
-        }
-        // O worker do OCR e mantido vivo entre as fotos (so e encerrado ao gerar o PDF ou sair
-        // da pagina): recria-lo a cada foto deixava o upload lento e instavel.
-      };
-
-      const promessa = filaOCRUpload.catch(() => {}).then(tarefa);
-      filaOCRUpload = promessa.catch(() => {});
-      return registrarPendenciaOCR(promessa);
     }
 
     async function comprimirImagem(file) {
@@ -1758,8 +1424,6 @@
       });
     }
 
-    // [OCR] prepararImagemOCR movido para dulcini-core.js (nucleo compartilhado).
-
     async function preview(input) {
       if (!input.files || !input.files[0]) return;
 
@@ -1770,9 +1434,7 @@
 
       try {
         const imagemCompacta = await comprimirImagem(arquivo);
-        preencherBoxImagem(box, imagemCompacta, null);
-        const imagemOCR = await prepararImagemOCR(arquivo).catch(() => imagemCompacta);
-        await executarOCRUploadBox(box, imagemCompacta, 'Granel - upload do lacre', arquivo.name || '', imagemOCR);
+        preencherBoxImagem(box, imagemCompacta);
       } catch {
         preencherBoxImagem(box, '');
         alert('Não foi possível processar essa foto.');
@@ -1811,15 +1473,10 @@
     function coletarLacres() {
       return Array.from(document.querySelectorAll('#container-lacres .lacre-box')).map((lacreBox, index) => {
         const boxImagem = lacreBox.querySelector('.box-imagem');
-        const inputNumero = lacreBox.querySelector('.lacre-numero-input');
-        const numeroLacre = inputNumero ? String(inputNumero.value || '').replace(/\D+/g, '').slice(0, 7) : '';
         return {
           numero: index + 1,
           local: lacreBox.querySelector('.lacre-local-select')?.value || '',
-          foto: obterSrcBox(boxImagem),
-          ocr: obterOCRBox(boxImagem),
-          numeroLacre,
-          numeroManual: inputNumero?.dataset.manual === '1'
+          foto: obterSrcBox(boxImagem)
         };
       });
     }
@@ -1858,15 +1515,6 @@
               <div class="foto-dica">Câmera do celular</div>
             </div>
           </div>
-
-          <div class="lacre-numero-wrap" style="margin-top:14px;">
-            <label>Número do lacre *</label>
-            <input type="text" inputmode="numeric" maxlength="7" class="lacre-numero-input" placeholder="0000000" autocomplete="off" oninput="onNumeroLacreInput(this)"
-              style="width:100%; box-sizing:border-box; padding:12px 14px; font-size:18px; font-weight:700; letter-spacing:4px; text-align:center; border:1px solid #cdd8d2; border-radius:10px;">
-            <p class="lacre-ocr-status" style="margin:8px 0 0; font-size:13px; color:#65756E;">Registre a foto para a leitura automática do número.</p>
-            <button type="button" class="btn-reprocessar" onclick="reprocessarLacre(this)"
-              style="display:none; margin-top:8px; padding:8px 14px; font-size:13px; font-weight:600; color:#00359D; background:#eef3ff; border:1px solid #c9d6f5; border-radius:9px; cursor:pointer;">Reprocessar leitura</button>
-          </div>
         </div>
       `;
 
@@ -1874,18 +1522,7 @@
       const novoLacre = container.lastElementChild;
 
       if (lacreData && lacreData.foto) {
-        preencherBoxImagem(novoLacre.querySelector('.box-imagem'), lacreData.foto, lacreData.ocr || null);
-      }
-
-      if (lacreData) {
-        const inputNumero = novoLacre.querySelector('.lacre-numero-input');
-        const numeroSalvo = String(lacreData.numeroLacre || '').replace(/\D+/g, '').slice(0, 7);
-        if (inputNumero && numeroSalvo) {
-          inputNumero.value = numeroSalvo;
-          if (lacreData.numeroManual) inputNumero.dataset.manual = '1';
-          else inputNumero.dataset.auto = '1';
-        }
-        atualizarTextoOCRBox(novoLacre.querySelector('.box-imagem'));
+        preencherBoxImagem(novoLacre.querySelector('.box-imagem'), lacreData.foto);
       }
 
       document.getElementById('painel-lacres').style.display = 'block';
@@ -2029,20 +1666,6 @@
       return faltantes;
     }
 
-    function listarNumerosLacresFaltantes() {
-      const faltantes = [];
-
-      document.querySelectorAll('#container-lacres .lacre-box').forEach((lacreBox, index) => {
-        const input = lacreBox.querySelector('.lacre-numero-input');
-        const numero = String(input?.value || '').replace(/\D+/g, '');
-        const valido = numero.length === OCR_LACRE_TAMANHO_PREFERENCIAL;
-        if (input) input.style.borderColor = valido ? '#cdd8d2' : '#d9534f';
-        if (!valido) faltantes.push(`Lacre ${index + 1}`);
-      });
-
-      return faltantes;
-    }
-
     function validarQuantidadeLacres() {
       const qtdInformada = parseInt(document.getElementById('qtd-lacres').value || '0', 10);
       const qtdAtual = document.querySelectorAll('#container-lacres .lacre-box').length;
@@ -2062,10 +1685,6 @@
       };
     }
 
-    async function obterDadosPDFComOCR() {
-      return obterDadosPDF();
-    }
-
     function montarMetaCard(titulo, valor) {
       return `
         <div class="pdf-meta-card">
@@ -2075,13 +1694,10 @@
       `;
     }
 
-    function montarFotoPDF(label, src = '', numeroLacre = '') {
-      const numero = String(numeroLacre || '').replace(/\D+/g, '');
-      const temNumero = Boolean(numero);
+    function montarFotoPDF(label, src = '') {
       return `
         <div class="pdf-photo-card">
           <span>${escaparHTML(label)}</span>
-          <div class="pdf-lacre-ocr${temNumero ? '' : ' is-missing'}">${temNumero ? 'Lacre: ' + escaparHTML(numero) : 'Lacre não informado'}</div>
           <div class="pdf-photo-frame">
             ${src ? `<img src="${src}" alt="${escaparHTML(label)}">` : ''}
           </div>
@@ -2105,13 +1721,13 @@
             <strong>${escaparHTML(lacre.local || 'Local não informado')}</strong>
           </div>
 
-          ${montarFotoPDF('Foto do lacre', lacre.foto || '', lacre.numeroLacre || '')}
+          ${montarFotoPDF('Foto do lacre', lacre.foto || '')}
         </article>
       `;
     }
 
     function construirPaginasPDF(dadosPDF = null) {
-      const { campos, lacres, geradoEm, codigo = '', qrDataUrl = '' } = dadosPDF || obterDadosPDF();
+      const { campos, lacres, geradoEm } = dadosPDF || obterDadosPDF();
       const root = document.getElementById('pdf-render-root');
       const paginas = [];
       const totalPaginas = 1 + Math.ceil(lacres.length / 2);
@@ -2134,13 +1750,6 @@
                 </div>
 
                 <div class="pdf-hero-side">
-                  ${codigo ? `<div class="pdf-highlight" style="display:flex; align-items:center; gap:12px;">
-                    <div style="flex:1; min-width:0;">
-                      <span>Protocolo de conferência</span>
-                      <strong style="font-size:0.82em; letter-spacing:0.4px; word-break:break-all;">${escaparHTML(codigo)}</strong>
-                    </div>
-                    ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR do protocolo" style="width:84px; height:84px; flex:0 0 auto; background:#fff; border-radius:6px;">` : ''}
-                  </div>` : ''}
                   <div class="pdf-highlight">
                     <span>Tipo de carga</span>
                     <strong>${escaparHTML(campos.tp)}</strong>
@@ -2179,7 +1788,7 @@
             </div>
 
             <div class="pdf-footer">
-              <span>${codigo ? 'Protocolo ' + escaparHTML(codigo) : 'Relatório de carregamento a granel'}</span>
+              <span>Relatório de carregamento a granel</span>
               <span>Emitido em ${escaparHTML(geradoEm)} • Documento v1.0</span>
               <strong>Dulcini S/A</strong>
             </div>
@@ -2220,7 +1829,7 @@
               </div>
 
               <div class="pdf-footer">
-                <span>Lacres ${i + 1}${dupla.length === 2 ? ` e ${i + 2}` : ''}${codigo ? ' • ' + escaparHTML(codigo) : ''}</span>
+                <span>Lacres ${i + 1}${dupla.length === 2 ? ` e ${i + 2}` : ''}</span>
                 <span>Emitido em ${escaparHTML(geradoEm)} • Documento v1.0</span>
                 <strong>Dulcini S/A</strong>
               </div>
@@ -2261,7 +1870,7 @@
       const lacres = Array.isArray(estado.lacres) ? estado.lacres : [];
       // 'c' (cliente) e 'tp' sao fixos/padrao -> nao contam como conteudo digitado pelo operador.
       const temCampos = ['m', 'p', 'colaborador', 'q', 'nf'].some((k) => String(campos[k] || '').trim());
-      const temLacres = lacres.some((l) => l.foto || l.numeroLacre || l.local);
+      const temLacres = lacres.some((l) => l.foto || l.local);
       return temCampos || temLacres;
     }
 
@@ -2303,7 +1912,6 @@
         return;
       }
 
-      await aguardarOCRUploadsPendentes();
       const snapshot = coletarEstadoAtual();
 
       if (!snapshot.campos.p || !snapshot.campos.colaborador) {
@@ -2415,14 +2023,12 @@
       corpo.innerHTML = lista.map((c) => {
         const campos = c.campos || {};
         const totalLacres = Array.isArray(c.lacres) ? c.lacres.length : 0;
-        const numeros = (Array.isArray(c.lacres) ? c.lacres : []).map((l) => escaparHTML(l.numeroLacre || '—')).join(', ');
         return `
           <div class="pendente-card">
             <strong>${escaparHTML(campos.p || '—')} • NF ${escaparHTML(campos.nf || '—')}</strong>
             <small>${escaparHTML(campos.c || '')}</small>
             <small>${escaparHTML(c.geradoEm || '')} • ${totalLacres} lacre(s)</small>
             <small>Protocolo: ${escaparHTML(c.codigo || '')}</small>
-            <small>Lacres: ${numeros}</small>
             <div class="pendente-acoes">
               <button type="button" class="pendente-retomar" onclick="reimprimirConferencia('${escaparHTML(c.id)}')">Baixar PDF</button>
               <button type="button" class="pendente-excluir" aria-label="Excluir do histórico" title="Excluir do histórico" onclick="excluirConferencia('${escaparHTML(c.id)}')">X</button>
@@ -2442,8 +2048,7 @@
           campos: registro.campos || {},
           lacres: Array.isArray(registro.lacres) ? registro.lacres : [],
           geradoEm: registro.geradoEm || formatarDataHora(new Date()),
-          codigo: registro.codigo || registro.id,
-          qrDataUrl: registro.qrDataUrl || ''
+          codigo: registro.codigo || registro.id
         };
         const nomeArquivo = registro.nomeArquivo || montarNomeArquivoPDF(dadosPDF.campos, dadosPDF.codigo);
         await renderizarEbaixarPDF(dadosPDF, nomeArquivo);
@@ -2623,19 +2228,11 @@
           alert('Ainda faltam fotos obrigatórias:\n\n' + faltantes.join('\n'));
           return;
         }
-        await aguardarOCRUploadsPendentes();
 
-        const numerosFaltantes = listarNumerosLacresFaltantes();
-        if (numerosFaltantes.length) {
-          alert('Informe o número (7 dígitos) dos lacres abaixo, conferindo na foto:\n\n' + numerosFaltantes.join('\n'));
-          return;
-        }
         const dadosPDF = obterDadosPDF();
-        registrarDiagnosticoOCR('pdf-dados-enviados', { contexto: 'Granel', lacres: resumirOCRParaDiagnostico() });
 
-        atualizarStatusLoading('Gerando protocolo e QR Code...');
+        atualizarStatusLoading('Gerando protocolo...');
         dadosPDF.codigo = gerarCodigoUnico();
-        dadosPDF.qrDataUrl = await gerarQRDataURL(montarTextoQRConferencia(dadosPDF.codigo, dadosPDF.campos, dadosPDF.lacres));
 
         const nomeArquivo = montarNomeArquivoPDF(dadosPDF.campos, dadosPDF.codigo);
         await renderizarEbaixarPDF(dadosPDF, nomeArquivo);
@@ -2650,7 +2247,6 @@
             geradoEm: dadosPDF.geradoEm,
             campos: dadosPDF.campos,
             lacres: dadosPDF.lacres,
-            qrDataUrl: dadosPDF.qrDataUrl,
             nomeArquivo
           });
           await limparRascunhoDB();
@@ -2668,7 +2264,6 @@
         console.error('Erro ao gerar PDF:', erro);
         alert('Não foi possível gerar o PDF neste dispositivo.');
       } finally {
-        await encerrarWorkerOCR();
         setTimeout(() => {
           loading.style.display = 'none';
         }, 650);
@@ -2703,7 +2298,7 @@
       if (!rascunho) return;
       const campos = rascunho.campos || {};
       const lacres = Array.isArray(rascunho.lacres) ? rascunho.lacres : [];
-      const temConteudo = lacres.some((l) => l.foto || l.numeroLacre || l.local)
+      const temConteudo = lacres.some((l) => l.foto || l.local)
         || ['p', 'm', 'colaborador', 'nf', 'q'].some((k) => String(campos[k] || '').trim());
       if (!temConteudo) return;
       aplicarEstadoAtual({ campos, lacres });
@@ -2732,7 +2327,6 @@
         placaInput.addEventListener('change', autoPreencherMotoristaPelaPlaca);
         placaInput.addEventListener('blur', autoPreencherMotoristaPelaPlaca);
       }
-      window.addEventListener('pagehide', () => { encerrarWorkerOCR(); });
 
       sincronizarFotos();
 
