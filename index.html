@@ -794,7 +794,7 @@
 
           <div class="campo">
             <label for="data-carregamento">Data do carregamento *</label>
-            <div class="input-shell"><input type="text" id="data-carregamento" readonly required></div>
+            <div class="input-shell"><input type="date" id="data-carregamento" required></div>
           </div>
 
           <div class="campo">
@@ -1262,6 +1262,25 @@
       }).format(data);
     }
 
+    // Conversores entre o formato persistido/exibido (BR "DD/MM/YYYY") e o valor do
+    // <input type="date"> (ISO "YYYY-MM-DD"). Sao manipulacao de STRING pura -- nunca
+    // constroem Date a partir do texto -- entao nao ha deslocamento de dia por fuso.
+    function dataBRparaISO(br) {
+      const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(br || '').trim());
+      if (!m) return '';
+      return `${m[3]}-${m[2]}-${m[1]}`;
+    }
+    function dataISOparaBR(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '').trim());
+      if (!m) return '';
+      return `${m[3]}/${m[2]}/${m[1]}`;
+    }
+    // Data de hoje no fuso local (getFullYear/Month/Date, nunca UTC) em ISO p/ o input.
+    function dataHojeISO() {
+      const hoje = new Date();
+      return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    }
+
     function formatarDataHora(data = new Date()) {
       const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
       const dia = String(data.getDate()).padStart(2,'0');
@@ -1453,7 +1472,7 @@
     function coletarCamposFormulario() {
       return {
         c: normalizarTextoMaiusculo(document.getElementById('c').value.trim()),
-        data: document.getElementById('data-carregamento').value.trim(),
+        data: dataISOparaBR(document.getElementById('data-carregamento').value),
         m: normalizarTextoMaiusculo(document.getElementById('m').value.trim()),
         p: normalizarPlaca(document.getElementById('p').value.trim()),
         colaborador: normalizarTextoMaiusculo(document.getElementById('colaborador').value.trim()),
@@ -1465,7 +1484,7 @@
 
     function aplicarCamposFormulario(campos = {}) {
       document.getElementById('c').value = normalizarTextoMaiusculo(campos.c || CLIENTE_PADRAO);
-      document.getElementById('data-carregamento').value = campos.data || formatarData(new Date());
+      document.getElementById('data-carregamento').value = dataBRparaISO(campos.data) || dataHojeISO();
       document.getElementById('m').value = normalizarTextoMaiusculo(campos.m || '');
       document.getElementById('p').value = normalizarPlaca(campos.p || '');
       document.getElementById('colaborador').value = normalizarTextoMaiusculo(campos.colaborador || '');
