@@ -14,6 +14,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="./cadastros-seed.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,31 +256,6 @@
       border-color:rgba(197,57,57,.45)!important;
       background:rgba(255,245,245,.95)!important;
       box-shadow:0 0 0 4px rgba(197,57,57,.08)!important;
-    }
-
-    .lacre-local{
-      margin-bottom:18px;padding:16px;border-radius:20px;
-      border:1px solid rgba(0,129,63,.18);
-      background:linear-gradient(135deg,rgba(232,246,239,.92),rgba(255,255,255,.98));
-      box-shadow:0 12px 22px rgba(0,53,157,.05);
-    }
-
-    .lacre-local label{
-      display:block;margin-bottom:10px;color:var(--verde-700);
-      font:800 13px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
-    }
-
-    .lacre-local-select{
-      width:100%;height:64px;padding:0 18px;border-radius:16px;
-      border:1px solid rgba(0,129,63,.22);background:#fff;color:var(--grafite);
-      font:800 20px/1.1 'Source Sans 3',sans-serif;outline:none;
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.72);
-    }
-
-    .lacre-local-select.local-pendente{
-      border-color:rgba(197,57,57,.45);
-      background:rgba(255,245,245,.95);
-      box-shadow:0 0 0 4px rgba(197,57,57,.08);
     }
 
     .lacre-box{position:relative;overflow:hidden}
@@ -660,21 +636,6 @@
       background:#F0F7F2;color:var(--verde-700);font:700 8px/1 'Montserrat',sans-serif;letter-spacing:.10em;text-transform:uppercase;
     }
 
-    .pdf-lacre-location{
-      margin-bottom:5px;padding:7px 9px;border-radius:10px;
-      border:1px solid rgba(0,129,63,.18);
-      background:linear-gradient(135deg,#F0F7F2,#FFFFFF);
-    }
-
-    .pdf-lacre-location span{
-      display:block;margin-bottom:3px;color:var(--verde-700);
-      font:800 7px/1 'Montserrat',sans-serif;letter-spacing:.12em;text-transform:uppercase;
-    }
-
-    .pdf-lacre-location strong{
-      display:block;color:var(--grafite);font:800 14px/1.08 'Montserrat',sans-serif;
-    }
-
     .pdf-photo-card{
       padding:4px;border-radius:11px;border:1px solid #E5EEE8;background:#FFFFFF;
     }
@@ -793,6 +754,11 @@
           </div>
 
           <div class="campo">
+            <label for="t">Transportadora *</label>
+            <div class="input-shell"><input type="text" id="t" value="COOPERPALMEIRAS - COOP.TRANSP. AUT. SCP" title="Transportadora exclusiva do carregamento a granel" readonly required></div>
+          </div>
+
+          <div class="campo">
             <label for="data-carregamento">Data do carregamento *</label>
             <div class="input-shell"><input type="date" id="data-carregamento" required></div>
           </div>
@@ -858,7 +824,12 @@
       <h3>Histórico de conferências</h3>
       <input type="search" id="busca-historico" placeholder="Buscar por cliente, placa, NF, motorista, protocolo ou data..." autocomplete="off"
         oninput="renderizarHistorico()" style="width:100%; box-sizing:border-box; padding:12px 14px; margin-bottom:14px; border:1px solid var(--borda); border-radius:12px; font-size:14px;">
-      <div id="lista-historico-corpo" style="max-height:60vh; overflow-y:auto; padding-right:4px;"></div>
+      <div id="lista-historico-corpo" style="max-height:52vh; overflow-y:auto; padding-right:4px;"></div>
+      <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--borda);">
+        <label for="import-cadastros" style="display:block; font-size:13px; font-weight:700; color:var(--verde-700); margin-bottom:6px;">Atualizar base de cadastros (Excel)</label>
+        <p style="margin:0 0 8px; font-size:12px; color:var(--texto-suave);">Planilha com colunas Placa, Motorista e Transportadora (uma aba por transportadora). Só adiciona o que falta; não duplica.</p>
+        <input type="file" id="import-cadastros" accept=".xlsx,.xls" onchange="importarCadastrosDeArquivo(this.files[0]); this.value='';" style="width:100%; font-size:13px;">
+      </div>
       <button type="button" class="btn btn-add" style="width:100%; margin-top:14px;" onclick="fecharHistorico()">Fechar</button>
     </div>
   </div>
@@ -879,32 +850,21 @@
     const STORAGE_KEY = 'dulcini_checklists_granel_pendentes';
     const LEGACY_STORAGE_KEYS = [STORAGE_KEY, 'checklists_granel_pendentes'];
     const DB_NAME = 'dulcini_checklists_granel_db';
-    const DB_VERSION = 3;
+    const DB_VERSION = 4;
     const STORE_NAME = 'pendentes';
     const RASCUNHO_STORE = 'rascunho-ativo';
     const RASCUNHO_KEY = 'atual';
     const CONFERENCIAS_STORE = 'conferencias';
+    const CADASTROS_STORE = 'cadastros';
     const CODIGO_PREFIXO = 'GRA';
+    // Granel é exclusivo da COOPERPALMEIRAS — transportadora travada (nome legal da base mestre).
+    const TRANSPORTADORA_GRANEL = 'COOPERPALMEIRAS - COOP.TRANSP. AUT. SCP';
     // PDFs acima deste número de páginas são pesados/lentos para rasterizar: avisamos antes de gerar.
     const LIMITE_PAGINAS_PDF = 60;
     const ERRO_PDF_CANCELADO = 'PDF_CANCELADO';
 
     const LOGO_DATA_URL = 'data:image/jpeg;base64,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';
     const WATERMARK_LOGO_DATA_URL = 'data:image/jpeg;base64,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';
-    const LOCAIS_LACRE = [
-      'Amostrador',
-      'Boca de visita 1º lacre',
-      'Boca de visita 2º lacre',
-      'Cano da mangueira',
-      'Filtro microbiológico',
-      'Respiro',
-      'Válvula da bomba',
-      'Válvula de alívio',
-      'Válvula de retenção',
-      'Válvula entrada principal 1',
-      'Válvula entrada principal 2',
-      'Válvula Spray-Ball superior'
-    ].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base', numeric: true }));
     const { jsPDF } = window.jspdf;
     let dbInstance = null;
     let pendentes = [];
@@ -926,6 +886,10 @@
           }
           if (!db.objectStoreNames.contains(CONFERENCIAS_STORE)) {
             db.createObjectStore(CONFERENCIAS_STORE, { keyPath: 'id' });
+          }
+          // Base mestre (motoristas/placas/transportadoras): semeada do Excel e ampliada no uso.
+          if (!db.objectStoreNames.contains(CADASTROS_STORE)) {
+            db.createObjectStore(CADASTROS_STORE, { keyPath: 'id' });
           }
         };
 
@@ -1079,25 +1043,150 @@
     function preencherDatalist(id, valores) {
       const dl = document.getElementById(id);
       if (!dl) return;
-      dl.innerHTML = Array.from(valores).slice(0, 60).map((v) => `<option value="${escaparHTML(v)}"></option>`).join('');
+      dl.innerHTML = Array.from(valores).slice(0, 400).map((v) => `<option value="${escaparHTML(v)}"></option>`).join('');
+    }
+
+    // ===== Base mestre (cadastros): motoristas, placas, transportadoras =====
+    const normCad = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    function idCadastro(tipo, valor) {
+      const v = tipo === 'placa' ? normalizarPlaca(valor) : normCad(valor).toUpperCase();
+      return tipo + '|' + v;
+    }
+    async function obterStoreCadastros(modo = 'readonly') {
+      const db = await abrirBanco();
+      return db.transaction(CADASTROS_STORE, modo).objectStore(CADASTROS_STORE);
+    }
+    async function listarCadastros(tipo = '') {
+      try {
+        const store = await obterStoreCadastros('readonly');
+        return await new Promise((resolve) => {
+          const req = store.getAll();
+          req.onsuccess = () => resolve((req.result || []).filter((r) => !tipo || r.tipo === tipo));
+          req.onerror = () => resolve([]);
+        });
+      } catch { return []; }
+    }
+    // Insere na base mestre só se ainda não existir (idempotente; chave normalizada evita duplicidade).
+    async function upsertCadastro(tipo, valorBruto, origem = 'manual') {
+      const valor = tipo === 'placa' ? normalizarPlaca(valorBruto) : normCad(valorBruto);
+      if (!valor) return false;
+      const id = idCadastro(tipo, valor);
+      try {
+        const store = await obterStoreCadastros('readwrite');
+        return await new Promise((resolve) => {
+          const get = store.get(id);
+          get.onsuccess = () => {
+            if (get.result) { resolve(false); return; }
+            store.put({ id, tipo, valor, origem, criadoEm: Date.now() });
+            store.transaction.oncomplete = () => resolve(true);
+            store.transaction.onerror = () => resolve(false);
+          };
+          get.onerror = () => resolve(false);
+        });
+      } catch { return false; }
+    }
+    // Semeia a base mestre do cadastros-seed.js (Excel). Só adiciona o que falta -> preserva edições/manuais.
+    async function semearCadastros() {
+      const seed = window.CADASTROS_SEED;
+      if (!seed) return;
+      try {
+        const store = await obterStoreCadastros('readwrite');
+        const existentes = await new Promise((resolve) => {
+          const req = store.getAllKeys();
+          req.onsuccess = () => resolve(new Set(req.result || []));
+          req.onerror = () => resolve(new Set());
+        });
+        const semear = (tipo, lista) => (lista || []).forEach((valorBruto) => {
+          const valor = tipo === 'placa' ? normalizarPlaca(valorBruto) : normCad(valorBruto);
+          if (!valor) return;
+          const id = idCadastro(tipo, valor);
+          if (existentes.has(id)) return;
+          existentes.add(id);
+          store.put({ id, tipo, valor, origem: 'excel', criadoEm: Date.now() });
+        });
+        semear('motorista', seed.motoristas);
+        semear('placa', seed.placas);
+        semear('transportadora', seed.transportadoras);
+        await new Promise((resolve) => { store.transaction.oncomplete = () => resolve(); store.transaction.onerror = () => resolve(); });
+      } catch (erro) { console.warn('Falha ao semear cadastros:', erro); }
+    }
+    // Importação de Excel sob demanda (SheetJS via CDN) -> amplia a base mestre. Idempotente, sem duplicar.
+    let sheetJsPromise = null;
+    function carregarSheetJS() {
+      if (window.XLSX) return Promise.resolve(window.XLSX);
+      if (!sheetJsPromise) sheetJsPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload = () => resolve(window.XLSX);
+        s.onerror = () => reject(new Error('Não foi possível carregar o leitor de Excel.'));
+        document.head.appendChild(s);
+      });
+      return sheetJsPromise;
+    }
+    async function importarCadastrosDeArquivo(file) {
+      if (!file) return;
+      let XLSX;
+      try { XLSX = await carregarSheetJS(); } catch (e) { alert(e.message + ' Verifique a conexão e tente novamente.'); return; }
+      let wb;
+      try { wb = XLSX.read(await file.arrayBuffer(), { type: 'array' }); }
+      catch { alert('Não foi possível ler este arquivo Excel.'); return; }
+      const store = await obterStoreCadastros('readwrite');
+      const existentes = await new Promise((resolve) => {
+        const r = store.getAllKeys();
+        r.onsuccess = () => resolve(new Set(r.result || []));
+        r.onerror = () => resolve(new Set());
+      });
+      const tentar = (tipo, valorBruto) => {
+        const valor = tipo === 'placa' ? normalizarPlaca(valorBruto) : normCad(valorBruto);
+        if (!valor) return false;
+        const id = idCadastro(tipo, valor);
+        if (existentes.has(id)) return false;
+        existentes.add(id);
+        store.put({ id, tipo, valor, origem: 'excel', criadoEm: Date.now() });
+        return true;
+      };
+      let lidos = 0, novos = 0;
+      for (const nomeAba of wb.SheetNames) {
+        const linhas = XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { header: 1, blankrows: false });
+        for (const linha of linhas) {
+          const placa = normCad(linha[0]); const motorista = normCad(linha[1]); const transp = normCad(linha[2]);
+          if (/^placa$/i.test(placa) && /^motorista$/i.test(motorista)) continue; // cabeçalho
+          if (!placa && !motorista && !transp) continue; // linha vazia
+          lidos++;
+          let criou = false;
+          if (placa) criou = tentar('placa', placa) || criou;
+          if (motorista) criou = tentar('motorista', motorista) || criou;
+          if (transp) criou = tentar('transportadora', transp) || criou;
+          if (criou) novos++;
+        }
+      }
+      await new Promise((resolve) => { store.transaction.oncomplete = () => resolve(); store.transaction.onerror = () => resolve(); });
+      await atualizarSugestoesHistorico();
+      alert(`Importação concluída.\nLinhas lidas: ${lidos}\nNovos registros adicionados: ${novos}`);
     }
 
     async function atualizarSugestoesHistorico() {
-      let conferencias = [];
-      try { conferencias = await listarConferenciasDB(); } catch (erro) { return; }
       const placas = new Set();
       const motoristas = new Set();
       placaParaMotorista = {};
-      // listarConferenciasDB já vem do mais recente para o mais antigo.
-      conferencias.forEach((c) => {
-        const campos = c.campos || {};
-        const placa = String(campos.p || '').trim();
-        const motorista = String(campos.m || '').trim();
-        if (placa) { placas.add(placa); if (!placaParaMotorista[placa] && motorista) placaParaMotorista[placa] = motorista; }
-        if (motorista) motoristas.add(motorista);
-      });
-      preencherDatalist('dl-placa', placas);
-      preencherDatalist('dl-motorista', motoristas);
+      // 1) Base mestre (cadastros) + relação placa->motorista do seed.
+      const cad = await listarCadastros();
+      cad.forEach((c) => { if (c.tipo === 'placa') placas.add(c.valor); else if (c.tipo === 'motorista') motoristas.add(c.valor); });
+      const seed = window.CADASTROS_SEED || {};
+      Object.entries(seed.placaMotorista || {}).forEach(([p, m]) => { if (!placaParaMotorista[p]) placaParaMotorista[p] = m; });
+      // 2) Histórico (aprende valores efetivamente usados).
+      try {
+        const conferencias = await listarConferenciasDB();
+        conferencias.forEach((c) => {
+          const campos = c.campos || {};
+          const placa = normalizarPlaca(campos.p || '');
+          const motorista = String(campos.m || '').trim();
+          if (placa) { placas.add(placa); if (!placaParaMotorista[placa] && motorista) placaParaMotorista[placa] = motorista; }
+          if (motorista) motoristas.add(motorista);
+        });
+      } catch {}
+      preencherDatalist('dl-placa', [...placas].sort());
+      preencherDatalist('dl-motorista', [...motoristas].sort((a, b) => a.localeCompare(b, 'pt-BR')));
     }
 
     function autoPreencherMotoristaPelaPlaca() {
@@ -1243,15 +1332,6 @@
       });
 
       configurarValidacoesCamposEspecificos();
-    }
-
-    function montarOpcoesLocais(valorSelecionado = '') {
-      const opcoes = ['<option value="">Selecione o local do lacre...</option>'];
-      LOCAIS_LACRE.forEach((local) => {
-        const selecionado = local === valorSelecionado ? ' selected' : '';
-        opcoes.push(`<option value="${escaparHTML(local)}"${selecionado}>${escaparHTML(local)}</option>`);
-      });
-      return opcoes.join('');
     }
 
     function formatarData(data = new Date()) {
@@ -1472,6 +1552,7 @@
     function coletarCamposFormulario() {
       return {
         c: normalizarTextoMaiusculo(document.getElementById('c').value.trim()),
+        t: TRANSPORTADORA_GRANEL, // regra de negócio: Granel é sempre COOPERPALMEIRAS (não vem do DOM).
         data: dataISOparaBR(document.getElementById('data-carregamento').value),
         m: normalizarTextoMaiusculo(document.getElementById('m').value.trim()),
         p: normalizarPlaca(document.getElementById('p').value.trim()),
@@ -1484,6 +1565,7 @@
 
     function aplicarCamposFormulario(campos = {}) {
       document.getElementById('c').value = normalizarTextoMaiusculo(campos.c || CLIENTE_PADRAO);
+      document.getElementById('t').value = TRANSPORTADORA_GRANEL; // sempre travado em COOPERPALMEIRAS.
       document.getElementById('data-carregamento').value = dataBRparaISO(campos.data) || dataHojeISO();
       document.getElementById('m').value = normalizarTextoMaiusculo(campos.m || '');
       document.getElementById('p').value = normalizarPlaca(campos.p || '');
@@ -1498,7 +1580,6 @@
         const boxImagem = lacreBox.querySelector('.box-imagem');
         return {
           numero: index + 1,
-          local: lacreBox.querySelector('.lacre-local-select')?.value || '',
           foto: obterSrcBox(boxImagem)
         };
       });
@@ -1507,7 +1588,6 @@
     function addLacre(lacreData = null, opcoes = {}) {
       const container = document.getElementById('container-lacres');
       const numero = container.querySelectorAll('.lacre-box').length + 1;
-      const opcoesLocais = montarOpcoesLocais(lacreData?.local || '');
 
       const html = `
         <div class="lacre-box panel">
@@ -1518,13 +1598,6 @@
               <p>Registre a foto do lacre para comprovação no PDF.</p>
             </div>
             <button type="button" class="btn-remover" onclick="removerLacre(this)">Remover</button>
-          </div>
-
-          <div class="lacre-local">
-            <label>Local do lacre *</label>
-            <select class="lacre-local-select" required>
-              ${opcoesLocais}
-            </select>
           </div>
 
           <div class="foto-wrapper">
@@ -1677,19 +1750,6 @@
       return true;
     }
 
-    function listarLocaisLacresFaltantes() {
-      const faltantes = [];
-
-      document.querySelectorAll('#container-lacres .lacre-box').forEach((lacreBox, index) => {
-        const select = lacreBox.querySelector('.lacre-local-select');
-        const preenchido = String(select?.value || '').trim() !== '';
-        if (select) select.classList.toggle('local-pendente', !preenchido);
-        if (!preenchido) faltantes.push(`Lacre ${index + 1}`);
-      });
-
-      return faltantes;
-    }
-
     function validarQuantidadeLacres() {
       const qtdInformada = parseInt(document.getElementById('qtd-lacres').value || '0', 10);
       const qtdAtual = document.querySelectorAll('#container-lacres .lacre-box').length;
@@ -1738,11 +1798,6 @@
               <p>Conferência visual registrada no checklist.</p>
             </div>
             <div class="pdf-lacre-badge">Lacre ${lacre.numero}</div>
-          </div>
-
-          <div class="pdf-lacre-location">
-            <span>Local do lacre</span>
-            <strong>${escaparHTML(lacre.local || 'Local não informado')}</strong>
           </div>
 
           ${montarFotoPDF('Foto do lacre', lacre.foto || '')}
@@ -1800,6 +1855,7 @@
 
                 <div class="pdf-meta-grid">
                   ${montarMetaCard('Cliente', campos.c)}
+                  ${montarMetaCard('Transportadora', campos.t || TRANSPORTADORA_GRANEL)}
                   ${montarMetaCard('Data do carregamento', campos.data)}
                   ${montarMetaCard('Motorista', campos.m)}
                   ${montarMetaCard('Placa do veículo', campos.p)}
@@ -1892,9 +1948,9 @@
       const estado = coletarEstadoAtual();
       const campos = estado.campos || {};
       const lacres = Array.isArray(estado.lacres) ? estado.lacres : [];
-      // 'c' (cliente) e 'tp' sao fixos/padrao -> nao contam como conteudo digitado pelo operador.
+      // 'c'/'tp'/'t' sao fixos/padrao -> nao contam como conteudo digitado pelo operador.
       const temCampos = ['m', 'p', 'colaborador', 'q', 'nf'].some((k) => String(campos[k] || '').trim());
-      const temLacres = lacres.some((l) => l.foto || l.local);
+      const temLacres = lacres.some((l) => l.foto);
       return temCampos || temLacres;
     }
 
@@ -2252,12 +2308,6 @@
           return;
         }
 
-        const locaisFaltantes = listarLocaisLacresFaltantes();
-        if (locaisFaltantes.length) {
-          alert('Informe o local dos lacres:\n\n' + locaisFaltantes.join('\n'));
-          return;
-        }
-
         const faltantes = listarFotosFaltantes();
         if (faltantes.length) {
           alert('Ainda faltam fotos obrigatórias:\n\n' + faltantes.join('\n'));
@@ -2285,6 +2335,9 @@
             nomeArquivo
           });
           await limparRascunhoDB();
+          // Aprende motorista/placa novos na base mestre (Granel: transportadora é sempre COOPERPALMEIRAS).
+          upsertCadastro('motorista', dadosPDF.campos.m).catch(() => {});
+          upsertCadastro('placa', dadosPDF.campos.p).catch(() => {});
           atualizarSugestoesHistorico();
         } catch (erroHist) {
           console.warn('Falha ao registrar conferência no histórico:', erroHist);
@@ -2322,12 +2375,6 @@
       }
     });
 
-    document.addEventListener('change', (event) => {
-      if (event.target.classList?.contains('lacre-local-select') && event.target.value) {
-        event.target.classList.remove('local-pendente');
-      }
-    });
-
     async function restaurarRascunho() {
       let rascunho = null;
       try {
@@ -2338,7 +2385,7 @@
       if (!rascunho) return;
       const campos = rascunho.campos || {};
       const lacres = Array.isArray(rascunho.lacres) ? rascunho.lacres : [];
-      const temConteudo = lacres.some((l) => l.foto || l.local)
+      const temConteudo = lacres.some((l) => l.foto)
         || ['p', 'm', 'colaborador', 'nf', 'q'].some((k) => String(campos[k] || '').trim());
       if (!temConteudo) return;
       aplicarEstadoAtual({ campos, lacres });
@@ -2351,6 +2398,7 @@
       try {
         await abrirBanco();
         await migrarLocalStorageParaIndexedDB();
+        await semearCadastros();
         await recarregarPendentes();
         await restaurarRascunho();
         await atualizarSugestoesHistorico();
