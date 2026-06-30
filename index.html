@@ -685,6 +685,15 @@
       .btn{height:52px;font-size:11px}
       .box-imagem{min-height:220px}
     }
+
+    /* Dropdown pesquisável (autocomplete) — lista ancorada ao campo, clara em mouse/teclado/toque. */
+    .ac-pop{position:fixed;z-index:9999;background:#fff;border:1px solid var(--borda);border-radius:14px;
+      box-shadow:0 14px 34px rgba(0,0,0,.18);max-height:264px;overflow-y:auto;padding:6px;
+      -webkit-overflow-scrolling:touch;font-family:inherit;}
+    .ac-item{padding:11px 13px;border-radius:10px;font-size:15px;line-height:1.25;color:var(--texto,#16241d);
+      cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:none;}
+    .ac-item.ativo,.ac-item:hover{background:rgba(0,129,63,.12);}
+    .ac-item.ac-vazio{color:var(--texto-suave);cursor:default;font-style:italic;background:none;}
   </style>
 </head>
 <body>
@@ -698,8 +707,6 @@
   <div id="status-conexao" role="status" aria-live="polite"
     style="display:none;position:fixed;left:20px;bottom:20px;z-index:30;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;color:#fff;font:700 12px/1 'Montserrat',sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.18);"></div>
 
-  <datalist id="dl-placa"></datalist>
-  <datalist id="dl-motorista"></datalist>
 
   <main id="render-area">
     <section class="hero-app">
@@ -755,7 +762,7 @@
 
           <div class="campo">
             <label for="t">Transportadora *</label>
-            <div class="input-shell"><input type="text" id="t" value="COOPERPALMEIRAS - COOP.TRANSP. AUT. SCP" title="Transportadora exclusiva do carregamento a granel" readonly required></div>
+            <div class="input-shell"><input type="text" id="t" value="COOPERPALMEIRAS - COOP.TRANSP. AUT. SCP" placeholder="Selecione a transportadora" title="Transportadoras do carregamento a granel" autocomplete="off" required></div>
           </div>
 
           <div class="campo">
@@ -765,12 +772,12 @@
 
           <div class="campo">
             <label for="m">Motorista *</label>
-            <div class="input-shell"><input type="text" id="m" placeholder="Nome completo" list="dl-motorista" required></div>
+            <div class="input-shell"><input type="text" id="m" placeholder="Nome completo" autocomplete="off" required></div>
           </div>
 
           <div class="campo">
             <label for="p">Placa do veículo *</label>
-            <div class="input-shell"><input type="text" id="p" placeholder="ABC-1234" maxlength="8" autocapitalize="characters" autocomplete="off" list="dl-placa" required></div>
+            <div class="input-shell"><input type="text" id="p" placeholder="ABC-1234" maxlength="8" autocapitalize="characters" autocomplete="off" required></div>
           </div>
 
           <div class="campo">
@@ -827,7 +834,7 @@
       <div id="lista-historico-corpo" style="max-height:52vh; overflow-y:auto; padding-right:4px;"></div>
       <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--borda);">
         <label for="import-cadastros" style="display:block; font-size:13px; font-weight:700; color:var(--verde-700); margin-bottom:6px;">Atualizar base de cadastros (Excel)</label>
-        <p style="margin:0 0 8px; font-size:12px; color:var(--texto-suave);">Planilha com colunas Placa, Motorista e Transportadora (uma aba por transportadora). Só adiciona o que falta; não duplica.</p>
+        <p style="margin:0 0 8px; font-size:12px; color:var(--texto-suave);">Planilha com colunas Placa, Motorista e Transportadora. Importa SOMENTE as abas do Granel (COOPERPALMEIRAS, PAVANI, MISSIATO, ARCO IRIS, NATALINO); abas de outros tipos e de clientes são ignoradas. Só adiciona o que falta; não duplica.</p>
         <input type="file" id="import-cadastros" accept=".xlsx,.xls" onchange="importarCadastrosDeArquivo(this.files[0]); this.value='';" style="width:100%; font-size:13px;">
       </div>
       <button type="button" class="btn btn-add" style="width:100%; margin-top:14px;" onclick="fecharHistorico()">Fechar</button>
@@ -1037,14 +1044,121 @@
       });
     }
 
-    // ===== Sugestões a partir do histórico (autocomplete + menos cliques) =====
+    // ===== Autocomplete pesquisável (dropdown ancorado; teclado, mouse e toque) =====
+    // Substitui o <datalist> nativo (que no mobile vira sugestão de teclado) por uma
+    // lista suspensa clara, ancorada ao campo, filtrando enquanto digita. As opções vêm
+    // da base mestre (cadastros) do PRÓPRIO app -> já respeitam o tipo de checklist.
     let placaParaMotorista = {};
+    let placaParaTransportadora = {};
+    const opcoesAC = { m: [], p: [], t: [], c: [] };
+    const normBuscaAC = (s) => String(s || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase().replace(/\s+/g, ' ').trim();
 
-    function preencherDatalist(id, valores) {
-      const dl = document.getElementById(id);
-      if (!dl) return;
-      dl.innerHTML = Array.from(valores).slice(0, 400).map((v) => `<option value="${escaparHTML(v)}"></option>`).join('');
+    let acPop = null, acInputAtual = null, acItens = [], acAtivo = -1;
+    const acFontes = {};
+
+    function acGarantirPop() {
+      if (acPop) return acPop;
+      acPop = document.createElement('div');
+      acPop.className = 'ac-pop';
+      acPop.setAttribute('role', 'listbox');
+      acPop.style.display = 'none';
+      acPop.addEventListener('pointerdown', (e) => {
+        const item = e.target.closest('.ac-item');
+        if (!item || item.dataset.vazio === '1') return;
+        e.preventDefault(); // mantém o foco no input (evita blur antes da seleção)
+        acSelecionar(item.dataset.valor);
+      });
+      document.body.appendChild(acPop);
+      return acPop;
     }
+    function acFechar() {
+      if (acPop) acPop.style.display = 'none';
+      if (acInputAtual) acInputAtual.setAttribute('aria-expanded', 'false');
+      acInputAtual = null; acItens = []; acAtivo = -1;
+    }
+    function acPosicionar(input) {
+      const r = input.getBoundingClientRect();
+      acPop.style.left = Math.round(r.left) + 'px';
+      acPop.style.top = Math.round(r.bottom + 2) + 'px';
+      acPop.style.width = Math.round(r.width) + 'px';
+    }
+    function acFiltrar(input) {
+      const fonte = acFontes[input.id];
+      const todas = (fonte ? fonte() : []) || [];
+      const q = normBuscaAC(input.value);
+      if (!q) return todas.slice(0, 50);
+      const comeca = [], contem = [];
+      for (const v of todas) {
+        const i = normBuscaAC(v).indexOf(q);
+        if (i === 0) comeca.push(v); else if (i > 0) contem.push(v);
+      }
+      return comeca.concat(contem).slice(0, 50);
+    }
+    function acRender(input) {
+      acGarantirPop();
+      acInputAtual = input;
+      acItens = acFiltrar(input);
+      acAtivo = -1;
+      if (!acItens.length) {
+        acPop.innerHTML = '<div class="ac-item ac-vazio" data-vazio="1">Sem cadastro — digite para usar um novo valor</div>';
+      } else {
+        acPop.innerHTML = acItens.map((v, i) =>
+          `<div class="ac-item" role="option" data-i="${i}" data-valor="${escaparHTML(v)}">${escaparHTML(v)}</div>`).join('');
+      }
+      acPosicionar(input);
+      acPop.style.display = 'block';
+      input.setAttribute('aria-expanded', 'true');
+    }
+    function acMover(delta) {
+      if (!acItens.length) return;
+      acAtivo = (acAtivo + delta + acItens.length) % acItens.length;
+      acPop.querySelectorAll('.ac-item').forEach((el) => {
+        const on = Number(el.dataset.i) === acAtivo;
+        el.classList.toggle('ativo', on);
+        if (on) el.scrollIntoView({ block: 'nearest' });
+      });
+    }
+    function acSelecionar(valor) {
+      if (!acInputAtual) return;
+      const input = acInputAtual;
+      input.value = valor;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      acFechar();
+      input.focus();
+    }
+    function registrarAutocomplete(id, fonte) {
+      const input = document.getElementById(id);
+      if (!input || input.dataset.acReady === '1') return;
+      input.dataset.acReady = '1';
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('role', 'combobox');
+      input.setAttribute('aria-autocomplete', 'list');
+      input.setAttribute('aria-expanded', 'false');
+      acFontes[id] = fonte;
+      input.addEventListener('focus', () => acRender(input));
+      input.addEventListener('input', () => acRender(input));
+      input.addEventListener('keydown', (e) => {
+        const aberto = acInputAtual === input && acPop && acPop.style.display === 'block';
+        if (!aberto) { if (e.key === 'ArrowDown') { acRender(input); e.preventDefault(); } return; }
+        if (e.key === 'ArrowDown') { acMover(1); e.preventDefault(); }
+        else if (e.key === 'ArrowUp') { acMover(-1); e.preventDefault(); }
+        else if (e.key === 'Enter') {
+          if (acAtivo >= 0 && acItens[acAtivo]) { acSelecionar(acItens[acAtivo]); e.preventDefault(); } else acFechar();
+        } else if (e.key === 'Escape') { acFechar(); }
+      });
+      input.addEventListener('blur', () => setTimeout(() => { if (acInputAtual === input) acFechar(); }, 120));
+    }
+    function configurarAutocompletes() {
+      // Granel: motorista, placa e transportadora (cliente é fixo HEINZ).
+      registrarAutocomplete('m', () => opcoesAC.m);
+      registrarAutocomplete('p', () => opcoesAC.p);
+      registrarAutocomplete('t', () => opcoesAC.t);
+    }
+    window.addEventListener('scroll', () => { if (acInputAtual && acPop && acPop.style.display === 'block') acPosicionar(acInputAtual); }, true);
+    window.addEventListener('resize', () => { if (acInputAtual && acPop && acPop.style.display === 'block') acPosicionar(acInputAtual); });
 
     // ===== Base mestre (cadastros): motoristas, placas, transportadoras =====
     const normCad = (s) => String(s || '').replace(/\s+/g, ' ').trim();
@@ -1110,6 +1224,32 @@
         await new Promise((resolve) => { store.transaction.oncomplete = () => resolve(); store.transaction.onerror = () => resolve(); });
       } catch (erro) { console.warn('Falha ao semear cadastros:', erro); }
     }
+    // Reconciliação: a base mestre é separada POR TIPO de checklist. Remove entradas SEMEADAS
+    // (origem 'excel') que não pertencem mais ao seed atual — ex.: motoristas/placas/transportadoras
+    // do outro tipo, semeados por versões anteriores (FASE 9). Preserva o que o usuário criou
+    // ('manual') ou importou manualmente ('importado').
+    async function reconciliarCadastrosSeed() {
+      const seed = window.CADASTROS_SEED;
+      if (!seed) return;
+      try {
+        const validos = new Set();
+        const reg = (tipo, lista) => (lista || []).forEach((v) => validos.add(idCadastro(tipo, v)));
+        reg('motorista', seed.motoristas);
+        reg('placa', seed.placas);
+        reg('transportadora', seed.transportadoras);
+        reg('cliente', seed.clientes);
+        const store = await obterStoreCadastros('readwrite');
+        const todos = await new Promise((resolve) => {
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        });
+        let removidos = 0;
+        todos.forEach((r) => { if (r && r.origem === 'excel' && !validos.has(r.id)) { store.delete(r.id); removidos++; } });
+        await new Promise((resolve) => { store.transaction.oncomplete = () => resolve(); store.transaction.onerror = () => resolve(); });
+        if (removidos) console.info('Cadastros reconciliados (removidos do seed antigo):', removidos);
+      } catch (erro) { console.warn('Falha ao reconciliar cadastros:', erro); }
+    }
     // Importação de Excel sob demanda (SheetJS via CDN) -> amplia a base mestre. Idempotente, sem duplicar.
     let sheetJsPromise = null;
     function carregarSheetJS() {
@@ -1142,15 +1282,26 @@
         const id = idCadastro(tipo, valor);
         if (existentes.has(id)) return false;
         existentes.add(id);
-        store.put({ id, tipo, valor, origem: 'excel', criadoEm: Date.now() });
+        store.put({ id, tipo, valor, origem: 'importado', criadoEm: Date.now() });
         return true;
       };
-      let lidos = 0, novos = 0;
+      // Granel: importa SOMENTE as abas de transportadoras do Granel (separação por tipo de checklist).
+      const ABAS_GRANEL = ['COOPERPALMEIRAS', 'PAVANI', 'MISSIATO', 'ARCO IRIS', 'NATALINO'];
+      const ehAbaGranel = (nome) => ABAS_GRANEL.includes(normCad(nome).toUpperCase());
+      let lidos = 0, novos = 0, abasIgnoradas = 0;
       for (const nomeAba of wb.SheetNames) {
+        if (!ehAbaGranel(nomeAba)) { abasIgnoradas++; continue; } // ignora Fracionado e abas de clientes
         const linhas = XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { header: 1, blankrows: false });
-        for (const linha of linhas) {
-          const placa = normCad(linha[0]); const motorista = normCad(linha[1]); const transp = normCad(linha[2]);
-          if (/^placa$/i.test(placa) && /^motorista$/i.test(motorista)) continue; // cabeçalho
+        // Colunas pelo cabeçalho; ARCO IRIS não tem cabeçalho e está deslocada (placa=B, motorista=C, transp=D).
+        let cP = 0, cM = 1, cT = 2, inicio = 0;
+        const idxHeader = linhas.findIndex((l) => l.some((v) => /^placa$/i.test(normCad(v))) && l.some((v) => /^motorista$/i.test(normCad(v))));
+        if (idxHeader >= 0) {
+          linhas[idxHeader].forEach((v, i) => { const t = normCad(v); if (/^placa$/i.test(t)) cP = i; else if (/^motorista$/i.test(t)) cM = i; else if (/^transportadora$/i.test(t)) cT = i; });
+          inicio = idxHeader + 1;
+        } else { cP = 1; cM = 2; cT = 3; }
+        for (let r = inicio; r < linhas.length; r++) {
+          const linha = linhas[r] || [];
+          const placa = normCad(linha[cP]); const motorista = normCad(linha[cM]); const transp = normCad(linha[cT]);
           if (!placa && !motorista && !transp) continue; // linha vazia
           lidos++;
           let criou = false;
@@ -1162,18 +1313,25 @@
       }
       await new Promise((resolve) => { store.transaction.oncomplete = () => resolve(); store.transaction.onerror = () => resolve(); });
       await atualizarSugestoesHistorico();
-      alert(`Importação concluída.\nLinhas lidas: ${lidos}\nNovos registros adicionados: ${novos}`);
+      alert(`Importação concluída (somente abas do Granel).\nLinhas lidas: ${lidos}\nNovos registros: ${novos}\nAbas ignoradas (fora do Granel): ${abasIgnoradas}`);
     }
 
     async function atualizarSugestoesHistorico() {
       const placas = new Set();
       const motoristas = new Set();
+      const transportadoras = new Set();
       placaParaMotorista = {};
-      // 1) Base mestre (cadastros) + relação placa->motorista do seed.
+      placaParaTransportadora = {};
+      // 1) Base mestre (cadastros) do PRÓPRIO app + relações do seed (placa->motorista/transportadora).
       const cad = await listarCadastros();
-      cad.forEach((c) => { if (c.tipo === 'placa') placas.add(c.valor); else if (c.tipo === 'motorista') motoristas.add(c.valor); });
+      cad.forEach((c) => {
+        if (c.tipo === 'placa') placas.add(c.valor);
+        else if (c.tipo === 'motorista') motoristas.add(c.valor);
+        else if (c.tipo === 'transportadora') transportadoras.add(c.valor);
+      });
       const seed = window.CADASTROS_SEED || {};
       Object.entries(seed.placaMotorista || {}).forEach(([p, m]) => { if (!placaParaMotorista[p]) placaParaMotorista[p] = m; });
+      Object.entries(seed.placaTransportadora || {}).forEach(([p, t]) => { if (!placaParaTransportadora[p]) placaParaTransportadora[p] = t; });
       // 2) Histórico (aprende valores efetivamente usados).
       try {
         const conferencias = await listarConferenciasDB();
@@ -1181,23 +1339,42 @@
           const campos = c.campos || {};
           const placa = normalizarPlaca(campos.p || '');
           const motorista = String(campos.m || '').trim();
-          if (placa) { placas.add(placa); if (!placaParaMotorista[placa] && motorista) placaParaMotorista[placa] = motorista; }
+          const transportadora = String(campos.t || '').trim();
+          if (placa) {
+            placas.add(placa);
+            if (!placaParaMotorista[placa] && motorista) placaParaMotorista[placa] = motorista;
+            if (!placaParaTransportadora[placa] && transportadora) placaParaTransportadora[placa] = transportadora;
+          }
           if (motorista) motoristas.add(motorista);
+          if (transportadora) transportadoras.add(transportadora);
         });
       } catch {}
-      preencherDatalist('dl-placa', [...placas].sort());
-      preencherDatalist('dl-motorista', [...motoristas].sort((a, b) => a.localeCompare(b, 'pt-BR')));
+      opcoesAC.p = [...placas].sort();
+      opcoesAC.m = [...motoristas].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      opcoesAC.t = [...transportadoras].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      if (acInputAtual) acRender(acInputAtual); // atualiza a lista aberta, se houver
     }
 
     function autoPreencherMotoristaPelaPlaca() {
       const placaEl = document.getElementById('p');
+      if (!placaEl) return;
+      const placa = normalizarPlaca(placaEl.value);
       const motoristaEl = document.getElementById('m');
-      if (!placaEl || !motoristaEl) return;
-      const motorista = placaParaMotorista[normalizarPlaca(placaEl.value)];
-      if (motorista && !String(motoristaEl.value || '').trim()) {
+      const motorista = placaParaMotorista[placa];
+      if (motoristaEl && motorista && !String(motoristaEl.value || '').trim()) {
         motoristaEl.value = motorista;
         aplicarMaiusculoNoCampo(motoristaEl);
         motoristaEl.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      // Auto-preenche a transportadora quando a placa mapeia para uma única (entre as 5 do Granel).
+      // Sobrescreve o padrão COOPERPALMEIRAS, mas respeita uma escolha manual diferente.
+      const transpEl = document.getElementById('t');
+      const transportadora = placaParaTransportadora[placa];
+      const atualTransp = normalizarTextoMaiusculo(String(transpEl?.value || '').trim());
+      if (transpEl && transportadora && (!atualTransp || atualTransp === TRANSPORTADORA_GRANEL) && atualTransp !== normalizarTextoMaiusculo(transportadora)) {
+        transpEl.value = transportadora;
+        aplicarMaiusculoNoCampo(transpEl);
+        transpEl.dispatchEvent(new Event('input', { bubbles: true }));
       }
     }
 
@@ -1552,7 +1729,7 @@
     function coletarCamposFormulario() {
       return {
         c: normalizarTextoMaiusculo(document.getElementById('c').value.trim()),
-        t: TRANSPORTADORA_GRANEL, // regra de negócio: Granel é sempre COOPERPALMEIRAS (não vem do DOM).
+        t: normalizarTextoMaiusculo(document.getElementById('t').value.trim()) || TRANSPORTADORA_GRANEL, // 5 transportadoras do Granel; COOPERPALMEIRAS é o padrão.
         data: dataISOparaBR(document.getElementById('data-carregamento').value),
         m: normalizarTextoMaiusculo(document.getElementById('m').value.trim()),
         p: normalizarPlaca(document.getElementById('p').value.trim()),
@@ -1565,7 +1742,7 @@
 
     function aplicarCamposFormulario(campos = {}) {
       document.getElementById('c').value = normalizarTextoMaiusculo(campos.c || CLIENTE_PADRAO);
-      document.getElementById('t').value = TRANSPORTADORA_GRANEL; // sempre travado em COOPERPALMEIRAS.
+      document.getElementById('t').value = normalizarTextoMaiusculo(campos.t || TRANSPORTADORA_GRANEL); // padrão COOPERPALMEIRAS; valor salvo é preservado.
       document.getElementById('data-carregamento').value = dataBRparaISO(campos.data) || dataHojeISO();
       document.getElementById('m').value = normalizarTextoMaiusculo(campos.m || '');
       document.getElementById('p').value = normalizarPlaca(campos.p || '');
@@ -2399,9 +2576,11 @@
         await abrirBanco();
         await migrarLocalStorageParaIndexedDB();
         await semearCadastros();
+        await reconciliarCadastrosSeed();
         await recarregarPendentes();
         await restaurarRascunho();
         await atualizarSugestoesHistorico();
+        configurarAutocompletes();
       } catch (erro) {
         console.error('Erro ao iniciar IndexedDB:', erro);
         alert('Não foi possível iniciar o armazenamento local neste dispositivo.');
