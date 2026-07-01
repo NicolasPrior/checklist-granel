@@ -1050,7 +1050,7 @@
     // da base mestre (cadastros) do PRÓPRIO app -> já respeitam o tipo de checklist.
     let placaParaMotorista = {};
     let placaParaTransportadora = {};
-    const opcoesAC = { m: [], p: [], t: [], c: [] };
+    const opcoesAC = { m: [], p: [], t: [], c: [], colab: [] };
     const normBuscaAC = (s) => String(s || '')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .toUpperCase().replace(/\s+/g, ' ').trim();
@@ -1152,10 +1152,11 @@
       input.addEventListener('blur', () => setTimeout(() => { if (acInputAtual === input) acFechar(); }, 120));
     }
     function configurarAutocompletes() {
-      // Granel: motorista, placa e transportadora (cliente é fixo HEINZ).
+      // Granel: motorista, placa, transportadora e colaborador responsável (cliente é fixo HEINZ).
       registrarAutocomplete('m', () => opcoesAC.m);
       registrarAutocomplete('p', () => opcoesAC.p);
       registrarAutocomplete('t', () => opcoesAC.t);
+      registrarAutocomplete('colaborador', () => opcoesAC.colab);
     }
     window.addEventListener('scroll', () => { if (acInputAtual && acPop && acPop.style.display === 'block') acPosicionar(acInputAtual); }, true);
     window.addEventListener('resize', () => { if (acInputAtual && acPop && acPop.style.display === 'block') acPosicionar(acInputAtual); });
@@ -1221,6 +1222,7 @@
         semear('motorista', seed.motoristas);
         semear('placa', seed.placas);
         semear('transportadora', seed.transportadoras);
+        semear('colaborador', seed.colaboradores); // colaboradores do Granel (Controle Funcionários -> aba "Granel")
         await new Promise((resolve) => { store.transaction.oncomplete = () => resolve(); store.transaction.onerror = () => resolve(); });
       } catch (erro) { console.warn('Falha ao semear cadastros:', erro); }
     }
@@ -1238,6 +1240,7 @@
         reg('placa', seed.placas);
         reg('transportadora', seed.transportadoras);
         reg('cliente', seed.clientes);
+        reg('colaborador', seed.colaboradores);
         const store = await obterStoreCadastros('readwrite');
         const todos = await new Promise((resolve) => {
           const req = store.getAll();
@@ -1320,6 +1323,7 @@
       const placas = new Set();
       const motoristas = new Set();
       const transportadoras = new Set();
+      const colaboradores = new Set();
       placaParaMotorista = {};
       placaParaTransportadora = {};
       // 1) Base mestre (cadastros) do PRÓPRIO app + relações do seed (placa->motorista/transportadora).
@@ -1328,6 +1332,7 @@
         if (c.tipo === 'placa') placas.add(c.valor);
         else if (c.tipo === 'motorista') motoristas.add(c.valor);
         else if (c.tipo === 'transportadora') transportadoras.add(c.valor);
+        else if (c.tipo === 'colaborador') colaboradores.add(c.valor);
       });
       const seed = window.CADASTROS_SEED || {};
       Object.entries(seed.placaMotorista || {}).forEach(([p, m]) => { if (!placaParaMotorista[p]) placaParaMotorista[p] = m; });
@@ -1340,6 +1345,7 @@
           const placa = normalizarPlaca(campos.p || '');
           const motorista = String(campos.m || '').trim();
           const transportadora = String(campos.t || '').trim();
+          const colaborador = String(campos.colaborador || '').trim();
           if (placa) {
             placas.add(placa);
             if (!placaParaMotorista[placa] && motorista) placaParaMotorista[placa] = motorista;
@@ -1347,11 +1353,13 @@
           }
           if (motorista) motoristas.add(motorista);
           if (transportadora) transportadoras.add(transportadora);
+          if (colaborador) colaboradores.add(colaborador);
         });
       } catch {}
       opcoesAC.p = [...placas].sort();
       opcoesAC.m = [...motoristas].sort((a, b) => a.localeCompare(b, 'pt-BR'));
       opcoesAC.t = [...transportadoras].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      opcoesAC.colab = [...colaboradores].sort((a, b) => a.localeCompare(b, 'pt-BR'));
       if (acInputAtual) acRender(acInputAtual); // atualiza a lista aberta, se houver
     }
 
@@ -2512,9 +2520,10 @@
             nomeArquivo
           });
           await limparRascunhoDB();
-          // Aprende motorista/placa novos na base mestre (Granel: transportadora é sempre COOPERPALMEIRAS).
+          // Aprende motorista/placa/colaborador novos na base mestre ao salvar (learn-on-save).
           upsertCadastro('motorista', dadosPDF.campos.m).catch(() => {});
           upsertCadastro('placa', dadosPDF.campos.p).catch(() => {});
+          upsertCadastro('colaborador', dadosPDF.campos.colaborador).catch(() => {});
           atualizarSugestoesHistorico();
         } catch (erroHist) {
           console.warn('Falha ao registrar conferência no histórico:', erroHist);
