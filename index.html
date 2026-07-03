@@ -707,6 +707,9 @@
   <div id="status-conexao" role="status" aria-live="polite"
     style="display:none;position:fixed;left:20px;bottom:20px;z-index:30;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;color:#fff;font:700 12px/1 'Montserrat',sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.18);"></div>
 
+  <div id="status-rascunho" role="status" aria-live="polite"
+    style="display:none;position:fixed;right:20px;bottom:20px;z-index:30;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;color:#fff;font:700 12px/1 'Montserrat',sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.18);"></div>
+
 
   <main id="render-area">
     <section class="hero-app">
@@ -973,22 +976,81 @@
       }
     }
 
+    // ===== Auto-save do rascunho (rede de segurança contra perda de dados) =====
+    // Debounce curto para digitação + teto de espera (digitar sem pausa não pode adiar a
+    // gravação para sempre) + descarga imediata quando o app sai de cena (troca de app,
+    // botão voltar, aba fechada): no celular o processo pode ser morto antes de um timer
+    // de 700ms disparar, e essa era a janela em que o checklist se perdia.
     let autoSaveTimer = null;
     let autoSaveAtivo = false;
+    let autoSavePrimeiraAlteracao = 0;
+    let autoSaveGravando = false;
+    let autoSaveRegravar = false;
+    let autoSaveFalhou = false;
+
+    function atualizarStatusRascunho(estado) {
+      const el = document.getElementById('status-rascunho');
+      if (!el) return;
+      clearTimeout(atualizarStatusRascunho._timer);
+      if (estado === 'oculto') { el.style.display = 'none'; return; }
+      const mapa = {
+        salvando: { texto: 'Salvando rascunho...', cor: '#5f6f81', ocultarMs: 0 },
+        salvo: { texto: 'Rascunho salvo neste aparelho', cor: '#0a7d33', ocultarMs: 2500 },
+        erro: { texto: 'Falha ao salvar o rascunho — tentando de novo...', cor: '#b3261e', ocultarMs: 0 },
+        recuperado: { texto: 'Rascunho recuperado — continue de onde parou', cor: '#0a7d33', ocultarMs: 6000 }
+      };
+      const cfg = mapa[estado];
+      if (!cfg) return;
+      el.textContent = cfg.texto;
+      el.style.background = cfg.cor;
+      el.style.display = 'inline-flex';
+      if (cfg.ocultarMs) {
+        atualizarStatusRascunho._timer = setTimeout(() => { el.style.display = 'none'; }, cfg.ocultarMs);
+      }
+    }
+
+    function temAlteracaoNaoGravada() {
+      return Boolean(autoSaveTimer) || autoSaveGravando || autoSaveRegravar || autoSaveFalhou;
+    }
+
+    async function executarAutoSave() {
+      if (autoSaveGravando) { autoSaveRegravar = true; return; }
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+      autoSavePrimeiraAlteracao = 0;
+      autoSaveGravando = true;
+      try {
+        const snapshot = coletarEstadoAtual();
+        const temConteudo = snapshot.lacres.length
+          || Object.values(snapshot.campos || {}).some((v) => String(v || '').trim());
+        atualizarStatusRascunho(temConteudo ? 'salvando' : 'oculto');
+        if (temConteudo) await salvarRascunhoDB(snapshot);
+        else await limparRascunhoDB();
+        autoSaveFalhou = false;
+        atualizarStatusRascunho(temConteudo ? 'salvo' : 'oculto');
+      } catch (erro) {
+        console.warn('Auto-save falhou:', erro);
+        autoSaveFalhou = true;
+        atualizarStatusRascunho('erro');
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(executarAutoSave, 5000);
+      } finally {
+        autoSaveGravando = false;
+        if (autoSaveRegravar) { autoSaveRegravar = false; executarAutoSave(); }
+      }
+    }
+
     function agendarAutoSave() {
       if (!autoSaveAtivo) return;
+      if (!autoSavePrimeiraAlteracao) autoSavePrimeiraAlteracao = Date.now();
+      if (Date.now() - autoSavePrimeiraAlteracao >= 2500) { executarAutoSave(); return; }
       clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => {
-        try {
-          const snapshot = coletarEstadoAtual();
-          const temConteudo = snapshot.lacres.length
-            || Object.values(snapshot.campos || {}).some((v) => String(v || '').trim());
-          if (temConteudo) salvarRascunhoDB(snapshot).catch((e) => console.warn('Auto-save falhou:', e));
-          else limparRascunhoDB();
-        } catch (erro) {
-          console.warn('Auto-save falhou:', erro);
-        }
-      }, 700);
+      autoSaveTimer = setTimeout(executarAutoSave, 700);
+    }
+
+    function descarregarRascunhoImediato() {
+      if (!autoSaveAtivo || !temAlteracaoNaoGravada()) return;
+      executarAutoSave();
     }
 
     // ===== Histórico / rastreabilidade =====
@@ -2371,7 +2433,11 @@
       if (!item) return;
 
       try {
-        aplicarEstadoAtual(normalizarPendente(item));
+        const snapshot = normalizarPendente(item);
+        aplicarEstadoAtual(snapshot);
+        // O rascunho é gravado ANTES de excluir o pendente: o checklist retomado nunca fica
+        // existindo só na tela. Se a gravação falhar, o pendente permanece na lista.
+        await salvarRascunhoDB(snapshot);
         await excluirPendenteDB(id);
         await recarregarPendentes();
         fecharPendentes();
@@ -2575,6 +2641,7 @@
         || ['p', 'm', 'colaborador', 'nf', 'q'].some((k) => String(campos[k] || '').trim());
       if (!temConteudo) return;
       aplicarEstadoAtual({ campos, lacres });
+      atualizarStatusRascunho('recuperado');
     }
 
     window.addEventListener('load', async () => {
@@ -2598,6 +2665,19 @@
       autoSaveAtivo = true;
       document.addEventListener('input', agendarAutoSave);
       document.addEventListener('change', agendarAutoSave);
+      // Saída/troca de app: grava na hora o que ainda estiver na janela do debounce. Em
+      // celular, visibilitychange/pagehide são os únicos eventos confiáveis antes de o
+      // sistema matar o app; beforeunload cobre desktop e só avisa se algo não foi gravado.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) descarregarRascunhoImediato();
+      });
+      window.addEventListener('pagehide', descarregarRascunhoImediato);
+      window.addEventListener('beforeunload', (evento) => {
+        if (!temAlteracaoNaoGravada()) return;
+        descarregarRascunhoImediato();
+        evento.preventDefault();
+        evento.returnValue = '';
+      });
       const placaInput = document.getElementById('p');
       if (placaInput) {
         placaInput.addEventListener('change', autoPreencherMotoristaPelaPlaca);
