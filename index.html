@@ -710,6 +710,15 @@
   <div id="status-rascunho" role="status" aria-live="polite"
     style="display:none;position:fixed;right:20px;bottom:20px;z-index:30;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;color:#fff;font:700 12px/1 'Montserrat',sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.18);"></div>
 
+  <div id="banner-pos-pdf" role="alertdialog" aria-live="assertive"
+    style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:60;width:min(480px,calc(100vw - 32px));flex-direction:column;gap:10px;padding:16px;border-radius:14px;background:#fff;box-shadow:0 14px 40px rgba(0,0,0,.28);font-family:'Montserrat',sans-serif;">
+    <p id="banner-pos-pdf-texto" style="margin:0;font-size:13px;font-weight:600;color:#243342;line-height:1.45;white-space:pre-line;"></p>
+    <div style="display:flex;gap:8px;">
+      <button type="button" class="pendente-retomar" style="padding:11px 10px;border:none;border-radius:10px;font-weight:700;cursor:pointer;" onclick="iniciarNovoChecklistPosPDF()">Iniciar novo checklist</button>
+      <button type="button" style="flex:1;padding:11px 10px;border:1px solid #c6d0da;border-radius:10px;background:#fff;color:#243342;font-weight:700;cursor:pointer;" onclick="fecharBannerPosPDF()">Continuar neste</button>
+    </div>
+  </div>
+
 
   <main id="render-area">
     <section class="hero-app">
@@ -991,11 +1000,14 @@
     function atualizarStatusRascunho(estado) {
       const el = document.getElementById('status-rascunho');
       if (!el) return;
+      // 'salvando' não mexe no chip (se havia erro visível, ele persiste até o desfecho);
+      // 'salvo' oculta em silêncio: o auto-save é rotina e avisar a cada pausa de digitação
+      // poluía a tela. O chip só aparece quando importa: falha (persiste até resolver) e
+      // recuperação de rascunho ao reabrir o app.
+      if (estado === 'salvando') return;
       clearTimeout(atualizarStatusRascunho._timer);
-      if (estado === 'oculto') { el.style.display = 'none'; return; }
+      if (estado === 'oculto' || estado === 'salvo') { el.style.display = 'none'; return; }
       const mapa = {
-        salvando: { texto: 'Salvando rascunho...', cor: '#5f6f81', ocultarMs: 0 },
-        salvo: { texto: 'Rascunho salvo neste aparelho', cor: '#0a7d33', ocultarMs: 2500 },
         erro: { texto: 'Falha ao salvar o rascunho — tentando de novo...', cor: '#b3261e', ocultarMs: 0 },
         recuperado: { texto: 'Rascunho recuperado — continue de onde parou', cor: '#0a7d33', ocultarMs: 6000 }
       };
@@ -2182,6 +2194,7 @@
       reordenarLacres();
       sincronizarFotos();
       fecharPendentes();
+      fecharBannerPosPDF();
 
       if (confirmarMensagem) {
         setTimeout(() => {
@@ -2378,7 +2391,7 @@
           codigo: registro.codigo || registro.id
         };
         const nomeArquivo = registro.nomeArquivo || montarNomeArquivoPDF(dadosPDF.campos, dadosPDF.codigo);
-        await renderizarEbaixarPDF(dadosPDF, nomeArquivo);
+        baixarBlob(await renderizarPDFEmBlob(dadosPDF), nomeArquivo);
       } catch (erro) {
         if (!(erro && erro.message === ERRO_PDF_CANCELADO)) {
           console.error('Erro ao reimprimir:', erro);
@@ -2483,6 +2496,28 @@
       setTimeout(() => URL.revokeObjectURL(url), 2000);
     }
 
+    // Conclusão do PDF: barra fixa com a pergunta de novo checklist (sobrevive ao app ir para
+    // segundo plano durante o download, ao contrário de um confirm()).
+    function mostrarConclusaoPDF(codigo, registradoNoHistorico) {
+      const banner = document.getElementById('banner-pos-pdf');
+      const texto = document.getElementById('banner-pos-pdf-texto');
+      if (!banner || !texto) return;
+      texto.textContent = registradoNoHistorico
+        ? `PDF gerado e registrado no histórico.\nProtocolo: ${codigo}\n\nDeseja iniciar um novo checklist?`
+        : `PDF gerado (protocolo ${codigo}), mas NÃO foi possível registrá-lo no histórico deste aparelho.\n\nDeseja iniciar um novo checklist?`;
+      banner.style.display = 'flex';
+    }
+
+    function fecharBannerPosPDF() {
+      const banner = document.getElementById('banner-pos-pdf');
+      if (banner) banner.style.display = 'none';
+    }
+
+    function iniciarNovoChecklistPosPDF() {
+      fecharBannerPosPDF();
+      limparChecklist(true);
+    }
+
     function obterAlturaPaginaPDF(pagina) {
       return Number(((pagina.offsetHeight / 1122) * 297).toFixed(2));
     }
@@ -2491,7 +2526,7 @@
       return alturaPagina < 210 ? 'landscape' : 'portrait';
     }
 
-    async function renderizarEbaixarPDF(dadosPDF, nomeArquivo) {
+    async function renderizarPDFEmBlob(dadosPDF) {
       atualizarStatusLoading('Montando as páginas do checklist...');
       const root = construirPaginasPDF(dadosPDF);
 
@@ -2529,8 +2564,7 @@
       }
 
       atualizarStatusLoading('Salvando o arquivo PDF...');
-      const blob = doc.output('blob');
-      baixarBlob(blob, nomeArquivo);
+      return doc.output('blob');
     }
 
     function montarNomeArquivoPDF(campos, codigo) {
@@ -2571,9 +2605,14 @@
         dadosPDF.codigo = gerarCodigoUnico();
 
         const nomeArquivo = montarNomeArquivoPDF(dadosPDF.campos, dadosPDF.codigo);
-        await renderizarEbaixarPDF(dadosPDF, nomeArquivo);
+        const blob = await renderizarPDFEmBlob(dadosPDF);
 
-        // Registra a conferência concluída no histórico local (rastreabilidade + reimpressão).
+        // Registra no histórico e limpa o rascunho ANTES de disparar o download: no celular,
+        // o visualizador/gerenciador de downloads assume a tela assim que o arquivo sai e o
+        // sistema pode congelar/matar o app — tudo que rodava depois do download se perdia
+        // (histórico sem o PDF, rascunho ressuscitando o checklist já emitido, pergunta de
+        // novo checklist nunca aparecendo).
+        let registradoNoHistorico = false;
         try {
           await salvarConferenciaDB({
             id: dadosPDF.codigo,
@@ -2585,6 +2624,7 @@
             lacres: dadosPDF.lacres,
             nomeArquivo
           });
+          registradoNoHistorico = true;
           await limparRascunhoDB();
           // Aprende motorista/placa/colaborador novos na base mestre ao salvar (learn-on-save).
           upsertCadastro('motorista', dadosPDF.campos.m).catch(() => {});
@@ -2595,10 +2635,11 @@
           console.warn('Falha ao registrar conferência no histórico:', erroHist);
         }
 
-        setTimeout(() => {
-          const desejaNovo = confirm('PDF gerado e registrado no histórico.\nProtocolo: ' + dadosPDF.codigo + '\n\nDeseja iniciar um novo checklist?');
-          if (desejaNovo) limparChecklist(true);
-        }, 450);
+        baixarBlob(blob, nomeArquivo);
+        // Barra fixa no lugar do confirm(): o navegador SUPRIME diálogos de página em segundo
+        // plano (o app fica atrás do visualizador de PDF logo após o download), então a
+        // pergunta "novo checklist?" não aparecia. A barra fica esperando o operador voltar.
+        mostrarConclusaoPDF(dadosPDF.codigo, registradoNoHistorico);
 
       } catch (erro) {
         if (erro && erro.message === ERRO_PDF_CANCELADO) {
