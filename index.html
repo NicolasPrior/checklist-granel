@@ -869,12 +869,18 @@
     const STORAGE_KEY = 'dulcini_checklists_granel_pendentes';
     const LEGACY_STORAGE_KEYS = [STORAGE_KEY, 'checklists_granel_pendentes'];
     const DB_NAME = 'dulcini_checklists_granel_db';
-    const DB_VERSION = 4;
+    const DB_VERSION = 5;
     const STORE_NAME = 'pendentes';
     const RASCUNHO_STORE = 'rascunho-ativo';
     const RASCUNHO_KEY = 'atual';
     const CONFERENCIAS_STORE = 'conferencias';
     const CADASTROS_STORE = 'cadastros';
+    // Índices LEVES (derivados) para listar histórico/pendentes sem carregar as fotos:
+    // cada registro completo carrega dataURLs de vários MB, e o getAll() antigo materializava
+    // TUDO na memória só para desenhar cartões de texto — com meses de uso, a tela travava.
+    // Os índices guardam apenas campos/contagens; os dados originais NUNCA são alterados.
+    const HISTORICO_INDICE_STORE = 'historico-indice';
+    const PENDENTES_INDICE_STORE = 'pendentes-indice';
     const CODIGO_PREFIXO = 'GRA';
     // Granel é exclusivo da COOPERPALMEIRAS — transportadora travada (nome legal da base mestre).
     const TRANSPORTADORA_GRANEL = 'COOPERPALMEIRAS - COOP.TRANSP. AUT. SCP';
@@ -910,6 +916,13 @@
           if (!db.objectStoreNames.contains(CADASTROS_STORE)) {
             db.createObjectStore(CADASTROS_STORE, { keyPath: 'id' });
           }
+          // v5: índices leves para listagem (derivados; reconstruíveis a partir dos dados).
+          if (!db.objectStoreNames.contains(HISTORICO_INDICE_STORE)) {
+            db.createObjectStore(HISTORICO_INDICE_STORE, { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains(PENDENTES_INDICE_STORE)) {
+            db.createObjectStore(PENDENTES_INDICE_STORE, { keyPath: 'id' });
+          }
         };
 
         request.onsuccess = () => {
@@ -941,12 +954,48 @@
     }
 
     async function salvarPendenteDB(item) {
-      const store = await obterStore('readwrite');
-
+      const db = await abrirBanco();
       return new Promise((resolve, reject) => {
-        const request = store.put(item);
-        request.onsuccess = () => resolve(item);
-        request.onerror = () => reject(request.error || new Error('Erro ao salvar pendente.'));
+        // Dado completo + índice leve na MESMA transação: nunca ficam fora de sincronia.
+        const tx = db.transaction([STORE_NAME, PENDENTES_INDICE_STORE], 'readwrite');
+        tx.objectStore(STORE_NAME).put(item);
+        tx.objectStore(PENDENTES_INDICE_STORE).put(montarIndicePendente(item));
+        tx.oncomplete = () => resolve(item);
+        tx.onerror = () => reject(tx.error || new Error('Erro ao salvar pendente.'));
+      });
+    }
+
+    async function obterPendenteDB(id) {
+      const store = await obterStore('readonly');
+      return new Promise((resolve, reject) => {
+        const req = store.get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error || new Error('Erro ao ler pendente.'));
+      });
+    }
+
+    // Resumo (sem fotos) de um pendente, suficiente para a listagem e o contador.
+    function montarIndicePendente(item = {}) {
+      const snapshot = normalizarPendente(item);
+      const lacres = Array.isArray(snapshot.lacres) ? snapshot.lacres : [];
+      return {
+        id: item.id,
+        dt: item.dt || '',
+        campos: { ...(snapshot.campos || {}) },
+        totais: { lacres: lacres.length }
+      };
+    }
+
+    async function listarIndicePendentesDB() {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction(PENDENTES_INDICE_STORE, 'readonly').objectStore(PENDENTES_INDICE_STORE).getAll();
+        req.onsuccess = () => {
+          const dados = Array.isArray(req.result) ? req.result : [];
+          dados.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+          resolve(dados);
+        };
+        req.onerror = () => reject(req.error || new Error('Erro ao listar pendentes.'));
       });
     }
 
@@ -1077,10 +1126,36 @@
     async function salvarConferenciaDB(registro) {
       const db = await abrirBanco();
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(CONFERENCIAS_STORE, 'readwrite');
+        // Dado completo + índice leve na MESMA transação: nunca ficam fora de sincronia.
+        const tx = db.transaction([CONFERENCIAS_STORE, HISTORICO_INDICE_STORE], 'readwrite');
         tx.objectStore(CONFERENCIAS_STORE).put(registro);
+        tx.objectStore(HISTORICO_INDICE_STORE).put(montarIndiceConferencia(registro));
         tx.oncomplete = () => resolve(registro);
         tx.onerror = () => reject(tx.error || new Error('Erro ao salvar conferência no histórico.'));
+      });
+    }
+
+    // Resumo (sem fotos) de uma conferência: tudo que a lista/busca do Histórico usa.
+    function montarIndiceConferencia(registro = {}) {
+      const { lacres, ...meta } = registro;
+      const listaLacres = Array.isArray(lacres) ? lacres : [];
+      return {
+        ...meta,
+        totalLacres: listaLacres.length,
+        numerosLacres: listaLacres.map((l) => (l && l.numeroLacre) || '').filter(Boolean)
+      };
+    }
+
+    async function listarIndiceConferenciasDB() {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction(HISTORICO_INDICE_STORE, 'readonly').objectStore(HISTORICO_INDICE_STORE).getAll();
+        req.onsuccess = () => {
+          const dados = Array.isArray(req.result) ? req.result : [];
+          dados.sort((a, b) => Number(b.dt || 0) - Number(a.dt || 0));
+          resolve(dados);
+        };
+        req.onerror = () => reject(req.error || new Error('Erro ao listar histórico.'));
       });
     }
 
@@ -1111,11 +1186,74 @@
     async function excluirConferenciaDB(id) {
       const db = await abrirBanco();
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(CONFERENCIAS_STORE, 'readwrite');
+        const tx = db.transaction([CONFERENCIAS_STORE, HISTORICO_INDICE_STORE], 'readwrite');
         tx.objectStore(CONFERENCIAS_STORE).delete(id);
+        tx.objectStore(HISTORICO_INDICE_STORE).delete(id);
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error || new Error('Erro ao excluir conferência.'));
       });
+    }
+
+    // ===== Índices de listagem: construção/reparo em segundo plano =====
+    // Compara apenas as CHAVES dos stores (operação barata, sem desserializar fotos) e indexa
+    // um registro por vez, devolvendo o fio à UI entre eles. Idempotente e retomável: pode ser
+    // interrompido a qualquer momento sem risco — os dados originais NUNCA são modificados.
+    async function listarChavesDB(nomeStore) {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction(nomeStore, 'readonly').objectStore(nomeStore).getAllKeys();
+        req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
+        req.onerror = () => reject(req.error || new Error('Erro ao listar chaves de ' + nomeStore));
+      });
+    }
+
+    async function gravarLinhaIndiceDB(nomeStore, linha) {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(nomeStore, 'readwrite');
+        tx.objectStore(nomeStore).put(linha);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function excluirLinhaIndiceDB(nomeStore, id) {
+      const db = await abrirBanco();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(nomeStore, 'readwrite');
+        tx.objectStore(nomeStore).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function sincronizarIndiceListagem(storeDados, storeIndice, montarLinha, obterRegistro) {
+      const [chavesDados, chavesIndice] = await Promise.all([listarChavesDB(storeDados), listarChavesDB(storeIndice)]);
+      const setDados = new Set(chavesDados);
+      const setIndice = new Set(chavesIndice);
+      for (const id of chavesIndice) {
+        if (!setDados.has(id)) await excluirLinhaIndiceDB(storeIndice, id);
+      }
+      for (const id of chavesDados) {
+        if (setIndice.has(id)) continue;
+        const registro = await obterRegistro(id); // um registro por vez: memória limitada
+        if (registro) await gravarLinhaIndiceDB(storeIndice, montarLinha(registro));
+        await new Promise((r) => setTimeout(r, 0)); // devolve o fio à UI entre registros
+      }
+    }
+
+    let indicesListagemPromise = null;
+    function garantirIndicesListagem() {
+      if (!indicesListagemPromise) {
+        indicesListagemPromise = (async () => {
+          await sincronizarIndiceListagem(CONFERENCIAS_STORE, HISTORICO_INDICE_STORE, montarIndiceConferencia, obterConferenciaDB);
+          await sincronizarIndiceListagem(STORE_NAME, PENDENTES_INDICE_STORE, montarIndicePendente, obterPendenteDB);
+        })().catch((erro) => {
+          console.warn('Falha ao sincronizar índices de listagem:', erro);
+          indicesListagemPromise = null; // permite nova tentativa na próxima abertura
+        });
+      }
+      return indicesListagemPromise;
     }
 
     // ===== Autocomplete pesquisável (dropdown ancorado; teclado, mouse e toque) =====
@@ -1411,9 +1549,9 @@
       const seed = window.CADASTROS_SEED || {};
       Object.entries(seed.placaMotorista || {}).forEach(([p, m]) => { if (!placaParaMotorista[p]) placaParaMotorista[p] = m; });
       Object.entries(seed.placaTransportadora || {}).forEach(([p, t]) => { if (!placaParaTransportadora[p]) placaParaTransportadora[p] = t; });
-      // 2) Histórico (aprende valores efetivamente usados).
+      // 2) Histórico (aprende valores efetivamente usados) — só o índice leve, sem fotos.
       try {
-        const conferencias = await listarConferenciasDB();
+        const conferencias = await listarIndiceConferenciasDB();
         conferencias.forEach((c) => {
           const campos = c.campos || {};
           const placa = normalizarPlaca(campos.p || '');
@@ -1461,12 +1599,13 @@
     }
 
     async function excluirPendenteDB(id) {
-      const store = await obterStore('readwrite');
-
+      const db = await abrirBanco();
       return new Promise((resolve, reject) => {
-        const request = store.delete(id);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error || new Error('Erro ao excluir pendente.'));
+        const tx = db.transaction([STORE_NAME, PENDENTES_INDICE_STORE], 'readwrite');
+        tx.objectStore(STORE_NAME).delete(id);
+        tx.objectStore(PENDENTES_INDICE_STORE).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('Erro ao excluir pendente.'));
       });
     }
 
@@ -1496,7 +1635,8 @@
     }
 
     async function recarregarPendentes() {
-      pendentes = await listarPendentesDB();
+      // Índice leve: o contador e a lista não precisam das fotos dos pendentes.
+      pendentes = await listarIndicePendentesDB();
       atualizarContador();
     }
 
@@ -2288,11 +2428,10 @@
         corpo.innerHTML = '<p style="text-align:center; color:#65756E; padding:24px 10px;">Nenhum checklist pendente no momento.</p>';
       } else {
         corpo.innerHTML = pendentes.map((item) => {
-          const snapshot = normalizarPendente(item);
-          const campos = snapshot.campos || {};
+          const campos = item.campos || {};
           const placa = escaparHTML(campos.p || '-');
           const nf = escaparHTML(campos.nf || 'Sem nota fiscal');
-          const totalLacres = Array.isArray(snapshot.lacres) ? snapshot.lacres.length : 0;
+          const totalLacres = (item.totais && item.totais.lacres) || 0;
 
           return `
             <div class="pendente-card">
@@ -2317,18 +2456,29 @@
     }
 
     let conferenciasCache = [];
+    // Renderização paginada: com anos de histórico, montar milhares de cartões de uma vez
+    // também travava a tela. A busca continua olhando o histórico INTEIRO (só o índice).
+    const HISTORICO_PAGINA = 30;
+    let historicoLimite = HISTORICO_PAGINA;
 
     async function abrirHistorico() {
       try {
-        conferenciasCache = await listarConferenciasDB();
+        conferenciasCache = await listarIndiceConferenciasDB();
       } catch (erro) {
         console.error('Erro ao carregar histórico:', erro);
         conferenciasCache = [];
       }
       const busca = document.getElementById('busca-historico');
       if (busca) busca.value = '';
+      historicoLimite = HISTORICO_PAGINA;
+      renderizarHistorico._ultimoTermo = '';
       renderizarHistorico();
       document.getElementById('modal-historico').style.display = 'block';
+    }
+
+    function mostrarMaisHistorico() {
+      historicoLimite += HISTORICO_PAGINA;
+      renderizarHistorico();
     }
 
     function fecharHistorico() {
@@ -2338,8 +2488,10 @@
 
     function textoBuscaConferencia(c) {
       const campos = c.campos || {};
-      const lacres = (Array.isArray(c.lacres) ? c.lacres : []).map((l) => l.numeroLacre).join(' ');
-      return [c.codigo, campos.c, campos.p, campos.nf, campos.m, campos.data, campos.colaborador, lacres, c.geradoEm]
+      const numerosLacres = Array.isArray(c.numerosLacres)
+        ? c.numerosLacres
+        : (Array.isArray(c.lacres) ? c.lacres : []).map((l) => (l && l.numeroLacre) || '').filter(Boolean);
+      return [c.codigo, campos.c, campos.p, campos.nf, campos.m, campos.data, campos.colaborador, numerosLacres.join(' '), c.geradoEm]
         .map((v) => String(v || '').toLowerCase()).join(' ');
     }
 
@@ -2347,6 +2499,10 @@
       const corpo = document.getElementById('lista-historico-corpo');
       if (!corpo) return;
       const termo = String(document.getElementById('busca-historico')?.value || '').trim().toLowerCase();
+      if (termo !== renderizarHistorico._ultimoTermo) {
+        renderizarHistorico._ultimoTermo = termo;
+        historicoLimite = HISTORICO_PAGINA;
+      }
       const lista = termo
         ? conferenciasCache.filter((c) => termo.split(/\s+/).every((t) => textoBuscaConferencia(c).includes(t)))
         : conferenciasCache;
@@ -2360,9 +2516,14 @@
         return;
       }
 
-      corpo.innerHTML = lista.map((c) => {
+      const visiveis = lista.slice(0, historicoLimite);
+      const restantes = lista.length - visiveis.length;
+
+      corpo.innerHTML = visiveis.map((c) => {
         const campos = c.campos || {};
-        const totalLacres = Array.isArray(c.lacres) ? c.lacres.length : 0;
+        const totalLacres = Number.isFinite(c.totalLacres)
+          ? c.totalLacres
+          : (Array.isArray(c.lacres) ? c.lacres.length : 0);
         return `
           <div class="pendente-card">
             <strong>${escaparHTML(campos.p || '—')} • NF ${escaparHTML(campos.nf || '—')}</strong>
@@ -2375,7 +2536,9 @@
             </div>
           </div>
         `;
-      }).join('');
+      }).join('') + (restantes > 0
+        ? `<button type="button" class="btn btn-add" style="width:100%; margin-top:10px;" onclick="mostrarMaisHistorico()">Mostrar mais (${restantes} restante${restantes > 1 ? 's' : ''})</button>`
+        : '');
     }
 
     async function reimprimirConferencia(id) {
@@ -2406,7 +2569,7 @@
       if (!confirm('Excluir esta conferência do histórico deste dispositivo? O PDF já baixado não é afetado.')) return;
       try {
         await excluirConferenciaDB(id);
-        conferenciasCache = await listarConferenciasDB();
+        conferenciasCache = await listarIndiceConferenciasDB();
         renderizarHistorico();
       } catch (erro) {
         console.error(erro);
@@ -2442,8 +2605,18 @@
     }
 
     async function recuperar(id) {
-      const item = pendentes.find(p => p.id === id);
-      if (!item) return;
+      let item = null;
+      try {
+        // A lista em memória guarda só o índice leve; o registro completo (com as fotos)
+        // é lido do banco na hora de retomar.
+        item = await obterPendenteDB(id);
+      } catch (erro) {
+        console.error(erro);
+      }
+      if (!item) {
+        alert('Não foi possível retomar este checklist pendente.');
+        return;
+      }
 
       try {
         const snapshot = normalizarPendente(item);
@@ -2698,6 +2871,13 @@
         await restaurarRascunho();
         await atualizarSugestoesHistorico();
         configurarAutocompletes();
+        // Constrói/repara os índices de listagem em segundo plano (1ª execução após a
+        // atualização indexa o legado; depois vira um diff barato de chaves). Ao concluir,
+        // atualiza o contador de pendências e as sugestões com o histórico completo.
+        garantirIndicesListagem().then(async () => {
+          await recarregarPendentes();
+          await atualizarSugestoesHistorico();
+        }).catch(() => {});
       } catch (erro) {
         console.error('Erro ao iniciar IndexedDB:', erro);
         alert('Não foi possível iniciar o armazenamento local neste dispositivo.');
