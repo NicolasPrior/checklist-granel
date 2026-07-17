@@ -285,7 +285,36 @@
     }
 
     .box-imagem input{
-      position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:3;
+      /* Escondidos: a abertura é sempre programática (abrirInputImagem), permitindo escolher
+         entre o input da câmera (capture) e o da galeria (sem capture). O overlay antigo
+         cobria o box com um único input capture="environment" — no Android isso força a
+         câmera SEMPRE e a galeria fica inalcançável. */
+      position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;
+    }
+
+    .box-acoes-foto{
+      display:none;position:absolute;left:12px;right:12px;bottom:12px;z-index:4;gap:8px;
+    }
+
+    .acao-foto{
+      flex:1;height:40px;border:none;border-radius:14px;cursor:pointer;
+      font:700 11px/1 'Montserrat',sans-serif;letter-spacing:.06em;text-transform:uppercase;
+    }
+
+    .acao-camera{
+      color:#fff;background:linear-gradient(135deg,var(--verde-700),var(--verde-600));
+      box-shadow:0 10px 18px rgba(0,129,63,.14);
+    }
+
+    .acao-galeria{
+      color:var(--verde-700);background:rgba(255,255,255,.94);
+      border:1px solid rgba(0,129,63,.20);
+      box-shadow:0 8px 16px rgba(0,129,63,.08);
+    }
+
+    @media (hover:none), (pointer:coarse){
+      .box-acoes-foto{display:flex}
+      .msg-camera{padding:22px 22px 92px}
     }
 
     .box-imagem img{
@@ -1948,6 +1977,46 @@
       }
     }
 
+    // Abertura programática dos inputs de foto (mesmo componente do Fracionado): o toque no
+    // box abre a câmera no Android (fluxo principal do operador) e a galeria no desktop; os
+    // botões Câmera/Galeria (visíveis em telas de toque) dão acesso explícito às duas origens.
+    // Trava anti-duplo-disparo: se botão E box dispararem na mesma interação (toque na área
+    // dos botões que também borbulha para o box), dois seletores de arquivo seriam pedidos e
+    // o ÚLTIMO venceria — no Android, a câmera "roubava" o clique do botão Galeria. Com a
+    // trava, só o PRIMEIRO pedido da interação vale (o do botão tocado).
+    let ultimaAberturaCaptura = 0;
+
+    function abrirInputImagem(box, origem = 'gallery') {
+      if (!box) return;
+      const agora = Date.now();
+      if (agora - ultimaAberturaCaptura < 800) return;
+      ultimaAberturaCaptura = agora;
+
+      const seletor = origem === 'camera' ? '.input-camera' : '.input-galeria';
+      const input = box.querySelector(seletor);
+      if (!input) return;
+
+      input.value = '';
+      input.click();
+    }
+
+    function abrirOrigemImagem(evento, box) {
+      // Toques na faixa dos botões Câmera/Galeria pertencem aos botões: o box nunca deve
+      // interpretá-los (mesmo que a propagação não tenha sido interrompida).
+      if (evento && evento.target && evento.target.closest && evento.target.closest('.box-acoes-foto')) return;
+      const ambiente = detectarAmbientePDF();
+      abrirInputImagem(box, ambiente.android ? 'camera' : 'gallery');
+    }
+
+    function abrirCaptura(event, botao, origem) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      abrirInputImagem(botao.closest('.box-imagem'), origem);
+    }
+
     function coletarCamposFormulario() {
       return {
         c: normalizarTextoMaiusculo(document.getElementById('c').value.trim()),
@@ -2002,12 +2071,17 @@
           <div class="foto-wrapper">
             <div class="foto-col">
               <label>Foto do lacre</label>
-              <div class="box-imagem">
-                <span class="msg-camera"><strong>Registrar foto</strong><small>Toque para abrir a câmera. Aproxime do lacre, com boa luz e sem reflexo.</small></span>
-                <input type="file" accept="image/*" capture="environment" onchange="preview(this)">
+              <div class="box-imagem" onclick="abrirOrigemImagem(event, this)">
+                <span class="msg-camera"><strong>Registrar foto</strong><small>Toque para abrir a câmera. Para escolher uma foto já tirada, use o botão Galeria abaixo.</small></span>
+                <input class="input-galeria" type="file" accept="image/*" onchange="preview(this)">
+                <input class="input-camera" type="file" accept="image/*" capture="environment" onchange="preview(this)">
+                <div class="box-acoes-foto">
+                  <button type="button" class="acao-foto acao-camera" onclick="abrirCaptura(event, this, 'camera')">Câmera</button>
+                  <button type="button" class="acao-foto acao-galeria" onclick="abrirCaptura(event, this, 'gallery')">Galeria</button>
+                </div>
                 <img alt="Foto do lacre">
               </div>
-              <div class="foto-dica">Câmera do celular</div>
+              <div class="foto-dica">Câmera do celular ou foto da galeria</div>
             </div>
           </div>
         </div>

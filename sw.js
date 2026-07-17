@@ -6,7 +6,7 @@
      online; depois ficam disponíveis offline.
    Sem backend: não há sincronização remota — a persistência é local (IndexedDB).
 */
-const CACHE = 'dulcini-granel-v12';
+const CACHE = 'dulcini-granel-v13';
 const PRECACHE = [
   './',
   './index.html',
